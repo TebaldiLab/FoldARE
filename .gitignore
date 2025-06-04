@@ -38,5 +38,10 @@ Thumbs.db
 
 # Sequence/Strucutre files #
 ############################
-.fasta
-.db
+*.fasta
+*.db
+*.txt
+
+# Generated files by the pipeline #
+###################################
+__pycache__
