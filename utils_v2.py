@@ -1,0 +1,238 @@
+import os
+import sys
+
+def ct2dot(ct_file, db_file, st_num=0, ct2dot_folder="dot2ct"):
+    """Converts dot-bracket notation to CT format using RNAStrucute tool."""
+    command = f"{ct2dot_folder} {ct_file} {st_num} {db_file}"
+    print("Running:", command)
+    os.system(command)
+
+def RNAStructure(seq_file, out_file, a="m6A", md=600, maxm=20, executable="/path/to/RNAStructure/fold", coinput_file=None):
+    """
+    Runs RNAstructure.
+    If coinput_file is provided, the command adds the '--SHAPE <coinput_file>' option.
+    """
+    if coinput_file:
+        command = (f"{executable} {seq_file} {out_file} -a {a} -md {md} -m {maxm} "
+                   f"--SHAPE {coinput_file}")
+    else:
+        command = f"{executable} {seq_file} {out_file} -a {a} -md {md} -m {maxm}"
+    print("Running RNAstructure command:", command)
+    os.system(command)
+
+def RNAFold(seq_file, out_file, max_bp_span=600, executable="RNAfold", coinput_file=None):
+    """
+    Runs RNAfold.
+    If coinput_file is provided, the command adds the '--shape <coinput_file>' option.
+    """
+    if coinput_file:
+        command = (f"{executable} -m -p --noPS --noDP --maxBPspan={max_bp_span} "
+                   f"--shape {coinput_file} {seq_file} > {out_file}")
+    else:
+        command = f"{executable} -m -p --noPS --noDP --maxBPspan={max_bp_span} {seq_file} > {out_file}"
+    print("Running RNAfold command:", command)
+    os.system(command)
+
+def RNASubopt(seq_file, out_file, n_struc=20, method='p', executable="RNAsubopt"):
+    command = f"{executable} -{method} {n_struc} -s < {seq_file} > {out_file}"
+    print("Running RNAsubopt command:", command)
+    os.system(command)
+
+def EternaFold(seq_file, out_file, mode="predict", executable="./../EternaFold-master/src/contrafold", eternaFold_params="../EternaFold-master/parameters/EternaFoldParams.v1", eternaFold_params_shape="../EternaFold-master/parameters/EternaFoldParams_PLUS_POTENTIALS.v1", nsamples=20):
+    """
+    Runs EnernaFold using contrafold.
+    In ensemble mode (mode="sample"), it runs:
+      contrafold_run sample <seq_file> --params <enernaFold_params> --nsamples <nsamples> > <out_file>
+    In predictor mode (mode="predict"), it runs:
+      contrafold_run predict <seq_file> --params <enernaFold_params> > <out_file>
+    (No SHAPE integration implemented for EnernaFold yet.)
+    """
+    if mode == "sample":
+        command = (f"{executable} sample {seq_file} --params {eternaFold_params} "
+                   f"--nsamples {nsamples} > {out_file}")
+    else:
+        command = f"{executable} predict {seq_file} --evidence --numdatasources 1 --kappa 0.1 --params {eternaFold_params_shape} > {out_file}"
+    print("Running EnernaFold command:", command)
+    os.system(command)
+
+#./src/contrafold predict test_SHAPE.bpseq --evidence --numdatasources 1 --kappa 0.1 --params parameters/EternaFoldParams_PLUS_POTENTIALS.v1 
+def LinearFold(seq_file, out_file, mode="predict", executable="./../LinearFold-master/linearfold", 
+               coinput_file=None, delta=2.0):
+    """
+    Runs LinearFold.
+    In ensemble mode (mode="ensemble"), the command uses:
+      cat <seq_file> | <executable> -V --zuker --delta 2.0 [--shape <coinput_file>] > <out_file>
+    In predictor mode (mode="predict"), the command uses:
+      cat <seq_file> | <executable> [ -V --shape <coinput_file> ] > <out_file>
+    """
+    if mode == "ensemble":
+        if coinput_file:
+            command = (f"cat {seq_file} | {executable} --shape {coinput_file} "
+                       f"--zuker --delta {delta} > {out_file}")
+        else:
+            command = f"cat {seq_file} | {executable} --zuker --delta {delta} > {out_file}"
+    else:  # predictor mode
+        if coinput_file:
+            command = f"cat {seq_file} | {executable} -V --shape {coinput_file} > {out_file}"
+        else:
+            command = f"cat {seq_file} | {executable} > {out_file}"
+    print("Running LinearFold command:", command)
+    os.system(command)
+
+
+def clean_ensemble_file(input_file, output_file):
+    """
+    Process an ensemble DB file so that only dot-bracket notations remain.
+    Lines starting with '>' or containing any alphabetical characters (e.g. sequence letters)
+    are omitted from the output.
+
+    :param input_file: Path to the original ensemble DB file.
+    :param output_file: Path to write the cleaned file.
+    """
+    # Define the set of allowed characters for dot-bracket notation.
+    allowed_chars = set(".()<>{}[]")
+    
+    with open(input_file, 'r') as inf, open(output_file, 'w') as outf:
+        for line in inf.readlines():
+            line = line.strip()
+            line = line.split()[0]  # remove energy values
+            # Skip empty lines
+            if not line:
+                continue
+            # Skip lines starting with '>' (titles) or that contain alphabetic characters.
+            if line.startswith('>') or any(ch.isalpha() for ch in line):
+                continue
+            # Optionally, ensure that the line consists solely of allowed characters.
+            #if set(line).issubset(allowed_chars):
+            outf.write(line + "\n")
+
+def extract_ensemble(file):
+    """
+    Extract the ensemble from a DB file as a list of dot–bracket strings.
+    Only lines that do NOT start with '>' or a letter are retained.
+    """
+    with open(file) as f:
+        lines = f.readlines()
+    ensemble = []
+    for line in lines:
+        line = line.strip()
+        line = line.split()[0]  # remove energy values
+        if not line:
+            continue
+        if not line.startswith(">") and not line[0].isalpha():
+            ensemble.append(line)
+    return ensemble
+
+def count_dots(ens):
+    """
+    For a list of dot–bracket strings (ensemble), count for each column 
+    the fraction of sequences that have a dot '.'.
+    Returns a list of probabilities.
+    """
+    dots = []
+    # assume all ensemble strings are of the same length
+    for i in range(len(ens[0])):
+        dot_count = sum(1 for seq in ens if seq[i] == ".")
+        dots.append(dot_count / len(ens))
+    return dots
+
+def create_shape_file(ensemble_file, shape_file_out, thresholds, coefficients):
+    """
+    Create a shape file from the ensemble DB file using configurable thresholds and coefficients.
+    The shape file contains one line per column in the format:
+      <position> <reactivity>
+    
+    Reactivity is determined by applying the following conditions:
+      - If thresholds["high"] > probability > thresholds["medium"], multiply by coefficients["medium"].
+      - If probability >= thresholds["high"], multiply by coefficients["high"].
+      - If thresholds["medium"] >= probability > thresholds["low"], multiply by coefficients["low"].
+      - Otherwise, use coefficients["default"].
+    
+    Parameters:
+      ensemble_file (str): Path to the ensemble DB file.
+      shape_file_out (str): Path to output the shape file.
+      thresholds (dict): Dictionary with keys "high", "medium", and "low" for probability boundaries.
+      coefficients (dict): Dictionary with keys "high", "medium", "low", and "default" for reactivity multipliers.
+    """
+    ensemble = extract_ensemble(ensemble_file)
+    if not ensemble:
+        sys.exit(f"Error: No valid ensemble sequences found in {ensemble_file}.")
+    
+    dots = count_dots(ensemble)
+    shape_lines = ""
+    
+    for i, prob in enumerate(dots):
+        pos = i + 1  # positions are 1-indexed
+        
+        if thresholds["high"] > prob > thresholds["medium"]:
+            value = prob * coefficients["medium"]
+        elif prob >= thresholds["high"]:
+            value = prob * coefficients["high"]
+        elif thresholds["medium"] >= prob > thresholds["low"]:
+            value = prob * coefficients["low"]
+        else:
+            value = coefficients["default"]
+        
+        shape_lines += f"{pos} {value}\n"
+    
+    with open(shape_file_out, 'w') as f:
+        f.write(shape_lines)
+    
+    print("Shape file created:", shape_file_out)
+
+
+def convert_shape_to_bpseq(shape_file, bpseq_file, seq_file):
+    """
+    Converts a .shape file to a .bpseq file.
+    
+    The .shape file is expected to have two whitespace-separated columns:
+        <position> <reactivity>
+    The output .bpseq file will have four columns:
+        <position> <nucleotide> e1 <reactivity_in_scientific_notation>
+    
+    The nucleotide information is obtained from the provided sequence file (FASTA format).
+    Lines in the sequence file starting with '>' are ignored.
+    
+    :param shape_file: Path to the input .shape file.
+    :param bpseq_file: Path to the output .bpseq file.
+    :param seq_file: Path to the sequence file (FASTA format).
+    """
+    # Read nucleotide sequence from the sequence file.
+    seq_lines = []
+    with open(seq_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith(">"):
+                continue
+            seq_lines.append(line)
+    sequence = "".join(seq_lines)
+    
+    # Read shape file values.
+    shape_values = []
+    with open(shape_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split()
+            if len(parts) >= 2:
+                try:
+                    # Use the reactivity value (second column).
+                    reactivity = float(parts[1])
+                except ValueError:
+                    reactivity = 0.0
+                shape_values.append(reactivity)
+    
+    if len(sequence) != len(shape_values):
+        raise ValueError("The length of the sequence does not match the number of shape values.")
+    
+    # Write bpseq file.
+    with open(bpseq_file, 'w') as out:
+        for i, reactivity in enumerate(shape_values, start=1):
+            nt = sequence[i-1]
+            # Format reactivity in scientific notation with zero decimals.
+            formatted_reactivity = "{:.2E}".format(reactivity)
+            out.write(f"{i} {nt} e1 {formatted_reactivity}\n")
+    
+    print(f"Converted {shape_file} to {bpseq_file}.")
+

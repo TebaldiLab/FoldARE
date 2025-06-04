@@ -1,0 +1,57 @@
+# config.yaml
+#impletent global ensemble number
+
+environment:   
+  data_tables: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/data_tables/"  # Path to data tables
+  threads: 6  # Number of threads to use for parallel processing
+
+RNAStructure:
+  # Path to the RNAstructure "fold" executable 
+  executable: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/exe/Fold-smp"
+  params:
+    a: "m6A"
+    md: 60000 #make it not default
+    maxm: 20
+
+RNAFold:
+  # For RNAFold, we assume the command is available in PATH.
+  executable: "RNAfold"
+  params:
+    max_bp_span: 0
+
+RNASubopt:
+  executable: "RNAsubopt"
+  params:
+    n_struc: 20
+    method: "p" # default is zuker
+
+EternaFold:
+  executable: "./../EternaFold-master/src/contrafold"
+  params:
+    eternaFold_params: "../EternaFold-master/parameters/EternaFoldParams.v1"
+    eternaFold_params_shape: "../EternaFold-master/parameters/EternaFoldParams_PLUS_POTENTIALS.v1"
+    nsamples: 20
+
+LinearFold:
+  executable: "./../LinearFold-master/linearfold"
+  params: 
+    delta: 5.0 #implemented cutting if more then ens number
+    
+# -k command for RNAStrucutre
+ct2dot:
+  # Path to the RNAstructure "dot2ct" executable
+  executable: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/exe/ct2dot"
+  params:
+    st_num: 0
+
+ShapeConversion:
+  params:
+    thresholds:
+      high: 0.9
+      medium: 0.5
+      low: 0.3
+    coefficients:
+      high: 2.5
+      medium: 1.25
+      low: 0.75
+      default: 0.0
