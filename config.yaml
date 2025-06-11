@@ -1,9 +1,10 @@
 # config.yaml
-#impletent global ensemble number
 
 environment:   
   data_tables: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/data_tables/"  # Path to data tables
   threads: 6  # Number of threads to use for parallel processing
+
+global_ensemble_size: 20 # Global ensemble size for all ensemble generation algorithms
 
 RNAStructure:
   # Path to the RNAstructure "fold" executable 
@@ -23,7 +24,7 @@ RNASubopt:
   executable: "RNAsubopt"
   params:
     n_struc: 20
-    method: "p" # default is zuker
+    method: "z" # default is zuker
 
 EternaFold:
   executable: "./../EternaFold-master/src/contrafold"

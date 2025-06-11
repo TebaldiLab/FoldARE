@@ -1,234 +1,258 @@
-#!/usr/bin/env python3
-"""
-RNA Prediction Pipeline
-
-This script runs the ensemble and predictor steps.
-It accepts overrides for shape conversion parameters and ensemble-size parameters.
-For ensemble-size overrides, use:
-  --ens_maxm for RNAStructure
-  --ens_par for RNASubopt
-  --ens_nsamples for EternaFold
-  --ens_delta for LinearFold
-
-Usage example:
-  python3 pipeline.py -p RNAFold -e RNAStructure -s myseq.fa -o results/ \
-    --config config.yaml --ens_maxm 50 --shape_threshold_high 0.95 --shape_coeff_high 2.5
-"""
-
 import os
-import sys
 import argparse
-import shutil
+from inspect import signature
 from ruamel.yaml import YAML
 from utils_v2 import (
-    RNAStructure, RNAFold, ct2dot, RNASubopt, clean_ensemble_file,
-    create_shape_file, EternaFold, LinearFold, convert_shape_to_bpseq
+    RNAStructure, RNAFold, ct2dot, RNASubopt,
+    clean_ensemble_file, create_shape_file,
+    EternaFold, LinearFold, convert_shape_to_bpseq
 )
 
-def load_config(config_file):
-    """Loads the YAML configuration using ruamel.yaml."""
-    yaml = YAML(typ='safe')
-    try:
-        with open(config_file, 'r') as f:
-            config = yaml.load(f)
-        return config
-    except Exception as e:
-        sys.exit(f"Error loading configuration file {config_file}: {e}")
+# -----------------------------------------------------------------------------
+# Helper utilities -------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
-# Mapping tool names to functions.
-tool_functions = {
-    "RNAStructure": RNAStructure,
-    "RNAFold": RNAFold,
-    "RNASubopt": RNASubopt,
-    "EternaFold": EternaFold,
-    "LinearFold": LinearFold,
-}
+def load_config(path: str):
+    yaml = YAML(typ="safe")
+    with open(path) as fh:
+        return yaml.load(fh)
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="RNA prediction pipeline: run ensemble and predictor tools with optional ensemble-size overrides."
+
+def ensure_dir(path: str):
+    if path and not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+
+
+def select(cfg_dict, cli_val, key):
+    """Pick value: config first, overridden by CLI if non-None."""
+    return cli_val if cli_val is not None else cfg_dict.get(key)
+
+
+def filter_kwargs(func, mapping):
+    """Drop keys not accepted by *func* and None-valued entries."""
+    sig = signature(func).parameters
+    return {k: v for k, v in mapping.items() if k in sig and v is not None}
+
+
+def clean_in_place(db_path: str):
+    """Run *clean_ensemble_file* safely without input‑=output overwrite."""
+    tmp_path = db_path + ".clean"
+    clean_ensemble_file(db_path, tmp_path)
+    os.replace(tmp_path, db_path)
+
+# -----------------------------------------------------------------------------
+# CLI -------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+parser = argparse.ArgumentParser(description="Sequence-level RNA prediction pipeline (ensemble → SHAPE → predictor)")
+parser.add_argument("-p", "--predictor", required=True,
+                    choices=["RNAFold", "RNAStructure", "EternaFold", "LinearFold"],
+                    help="Tool used for final prediction")
+parser.add_argument("-e", "--ensemble", required=True,
+                    choices=["RNAFold", "RNAStructure", "EternaFold", "LinearFold", "RNASubopt"],
+                    help="Tool that generates the ensemble")
+parser.add_argument("-s", "--sequence", required=True, help="Input FASTA file")
+parser.add_argument("-o", "--output_folder", default=".")
+parser.add_argument("-c", "--config", default="config.yaml", help="YAML configuration file")
+parser.add_argument("--shape", help="Existing SHAPE file – skip ensemble step")
+
+# Global ensemble size override
+parser.add_argument("--ens_n", type=int, help="Target ensemble size for all tools")
+
+# Optional per-tool overrides (take effect only if supplied)
+parser.add_argument("--ens_nsamples", type=int)
+parser.add_argument("--ens_maxm", type=int)
+parser.add_argument("--ens_par", type=int)
+parser.add_argument("--ens_delta", type=float)
+args = parser.parse_args()
+
+# -----------------------------------------------------------------------------
+# Config & environment ---------------------------------------------------------
+# -----------------------------------------------------------------------------
+CFG = load_config(args.config)
+
+# Environment variables --------------------------------------------------------
+env_cfg = CFG.get("environment", {})
+root_dir = os.getcwd() + "/"
+if "data_tables" in env_cfg:
+    os.environ["DATAPATH"] = os.path.abspath(os.path.join(root_dir, env_cfg["data_tables"]))
+if env_cfg.get("threads") is not None:
+    os.environ["OMP_NUM_THREADS"] = str(env_cfg["threads"])
+    print("Using", os.environ["OMP_NUM_THREADS"], "threads for parallel execution.")
+
+# Derived settings -------------------------------------------------------------
+ensemble_target = args.ens_n if args.ens_n is not None else CFG.get("global_ensemble_size")
+ensemble_cfg = CFG.get(args.ensemble, {})
+predictor_cfg = CFG.get(args.predictor, {})
+ct2_cfg = CFG.get("ct2dot", {})
+shape_cfg = CFG.get("ShapeConversion", {}).get("params", {})
+
+# Executables ------------------------------------------------------------------
+ens_exec = ensemble_cfg.get("executable")
+pred_exec = predictor_cfg.get("executable")
+ct2_exec = ct2_cfg.get("executable")
+
+# Parameter dictionaries -------------------------------------------------------
+ens_params_cfg = ensemble_cfg.get("params", {})
+pred_params_cfg = predictor_cfg.get("params", {})
+ct2_params_cfg = ct2_cfg.get("params", {})
+
+# Merge CLI overrides ----------------------------------------------------------
+nsamples = select(ens_params_cfg, args.ens_nsamples, "n_struc") or ensemble_target
+maxm     = select(ens_params_cfg, args.ens_maxm, "maxm")
+par      = select(ens_params_cfg, args.ens_par, "par")
+delta    = select(ens_params_cfg, args.ens_delta, "delta") or ens_params_cfg.get("delta", 5.0)
+
+# -----------------------------------------------------------------------------
+# Output prep ------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+ensure_dir(args.output_folder)
+base_name = os.path.splitext(os.path.basename(args.sequence))[0]
+
+# -----------------------------------------------------------------------------
+# ENSEMBLE generation ----------------------------------------------------------
+# -----------------------------------------------------------------------------
+if args.shape is None:
+    ens_db = os.path.join(args.output_folder, f"{base_name}_{args.ensemble}_ens.db")
+    tool = args.ensemble.lower()
+
+    if tool == "rnasubopt":
+        RNASubopt(**filter_kwargs(RNASubopt, {
+            "seq_file": args.sequence,
+            "out_file": ens_db,
+            "n_struc": nsamples,
+            "method": ens_params_cfg.get("method"),
+            "executable": ens_exec,
+        }))
+        clean_in_place(ens_db)
+
+    elif tool == "eternafold":
+        EternaFold(**filter_kwargs(EternaFold, {
+            "seq_file": args.sequence,
+            "out_file": ens_db,
+            "mode": "sample",
+            "nsamples": nsamples,
+            "executable": ens_exec,
+            **ens_params_cfg,
+        }))
+        clean_in_place(ens_db)
+
+    elif tool == "linearfold":
+        desired = ensemble_target or nsamples or 1
+        current_delta = delta
+        tmp_db = ens_db + ".tmp"
+        while True:
+            LinearFold(**filter_kwargs(LinearFold, {
+                "seq_file": args.sequence,
+                "out_file": tmp_db,
+                "mode": "ensemble",
+                "delta": current_delta,
+                "executable": ens_exec,
+            }))
+            clean_in_place(tmp_db)
+            with open(tmp_db) as fh:
+                lines = fh.readlines()
+            if len(lines) >= desired:
+                break
+            current_delta += 1.0
+        # Trim to exactly desired
+        if len(lines) > desired:
+            with open(tmp_db, "w") as fh:
+                fh.writelines(lines[:desired])
+        os.replace(tmp_db, ens_db)
+
+    elif tool == "rnastructure":
+        RNAStructure(**filter_kwargs(RNAStructure, {
+            "seq_file": args.sequence,
+            "out_file": ens_db,
+            "executable": ens_exec,
+            **ens_params_cfg,
+        }))
+        clean_in_place(ens_db)
+
+    elif tool == "rnafold":
+        # fallback: use RNASubopt behaviour
+        RNASubopt(**filter_kwargs(RNASubopt, {
+            "seq_file": args.sequence,
+            "out_file": ens_db,
+            "n_struc": nsamples,
+            "method": ens_params_cfg.get("method", "p"),
+            "executable": CFG.get("RNASubopt", {}).get("executable", "RNAsubopt"),
+        }))
+        clean_in_place(ens_db)
+
+    else:
+        raise ValueError(f"Unsupported ensemble tool: {args.ensemble}")
+
+    # Post-trim for non-LinearFold multi-structure generators
+    if tool not in ["linearfold", "rnastructure"] and ensemble_target is not None:
+        with open(ens_db) as fh:
+            entries = fh.readlines()
+        if len(entries) > ensemble_target:
+            with open(ens_db, "w") as fh:
+                fh.writelines(entries[:ensemble_target])
+
+    # Shape generation --------------------------------------------------------
+    shape_file = os.path.join(args.output_folder, f"{base_name}_shape.txt")
+    create_shape_file(
+        ens_db,
+        shape_file,
+        thresholds=shape_cfg.get("thresholds", {}),
+        coefficients=shape_cfg.get("coefficients", {}),
     )
-    parser.add_argument("-p", "--predictor", required=True,
-                        help="Tool to use for final prediction (e.g. RNAFold)")
-    parser.add_argument("-e", "--ensemble", required=True,
-                        help="Tool to use for ensemble prediction (e.g. RNAStructure or RNAfold)")
-    parser.add_argument("-s", "--sequence", required=True,
-                        help="Path to the sequence file")
-    parser.add_argument("-o", "--output_folder", default=".",
-                        help="Folder to save output files (default: current working directory)")
-    parser.add_argument("--shape", default=None,
-                        help="Path to a SHAPE file. If provided, ensemble predictor is skipped.")
-    parser.add_argument("-c", "--config", default="config.yaml",
-                        help="Path to the YAML configuration file")
-    # Shape conversion override flags.
-    parser.add_argument("--shape_threshold_high", type=float,
-                        help="Override ShapeConversion threshold for high reactivity")
-    parser.add_argument("--shape_threshold_medium", type=float,
-                        help="Override ShapeConversion threshold for medium reactivity")
-    parser.add_argument("--shape_threshold_low", type=float,
-                        help="Override ShapeConversion threshold for low reactivity")
-    parser.add_argument("--shape_coeff_high", type=float,
-                        help="Override ShapeConversion coefficient for high reactivity")
-    parser.add_argument("--shape_coeff_medium", type=float,
-                        help="Override ShapeConversion coefficient for medium reactivity")
-    parser.add_argument("--shape_coeff_low", type=float,
-                        help="Override ShapeConversion coefficient for low reactivity")
-    parser.add_argument("--shape_coeff_default", type=float,
-                        help="Override ShapeConversion default coefficient")
-    # Ensemble size override flags.
-    parser.add_argument("--ens_maxm", type=int,
-                        help="Override ensemble parameter 'maxm' for RNAStructure")
-    parser.add_argument("--ens_par", type=int,
-                        help="Override ensemble parameter 'par' for RNASubopt")
-    parser.add_argument("--ens_nsamples", type=int,
-                        help="Override ensemble parameter 'nsamples' for EternaFold")
-    parser.add_argument("--ens_delta", type=float,
-                        help="Override ensemble parameter 'delta' for LinearFold")
-    args = parser.parse_args()
+else:
+    shape_file = args.shape
 
-    # Ensure output folder exists.
-    output_folder = args.output_folder
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-    print("Output files will be saved in:", os.path.abspath(output_folder))
+# -----------------------------------------------------------------------------
+# PREDICTION -------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
-    # Load configuration.
-    config = load_config(args.config)
-    env_config = config.get("environment", {})
-    root = os.getcwd() + '/'
-    data_tables = env_config.get("data_tables", "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/data_tables/")
-    os.environ["DATAPATH"] = root + data_tables
-    print("DATAPATH set to:", os.environ["DATAPATH"])
+ptool = args.predictor.lower()
+pred_out = os.path.join(args.output_folder, f"{base_name}_{tool}_{ptool}_final.db")
 
-    # Determine tool keys.
-    predictor_key = args.predictor
-    if args.ensemble.lower() == "rnafold":
-        ensemble_key = "RNASubopt"
-    else:
-        ensemble_key = args.ensemble
+if ptool == "eternafold":
+    bpseq = os.path.join(args.output_folder, f"{base_name}_shape.bpseq")
+    convert_shape_to_bpseq(shape_file, bpseq, args.sequence)
+    kw = filter_kwargs(EternaFold, {
+        "seq_file": bpseq,
+        "out_file": pred_out,
+        "mode": "predict",
+        "executable": pred_exec,
+        "eternaFold_params_shape": pred_params_cfg.get("eternaFold_params_shape"),
+    })
+    EternaFold(**kw)
 
-    if predictor_key not in config:
-        sys.exit(f"Error: predictor tool '{predictor_key}' not found in configuration.")
-    if ensemble_key not in config:
-        sys.exit(f"Error: Ensemble tool '{ensemble_key}' not found in configuration.")
+elif ptool == "linearfold":
+    kw = filter_kwargs(LinearFold, {
+        "seq_file": args.sequence,
+        "out_file": pred_out,
+        "mode": "predict",
+        "executable": pred_exec,
+        "coinput_file": shape_file,
+    })
+    LinearFold(**kw)
 
-    predictor_conf = config[predictor_key]
-    ensemble_conf = config[ensemble_key]
-    ct2dot_conf = config.get("ct2dot", {"executable": "ct2dot", "params": {}})
+elif ptool == "rnastructure":
+    kw = filter_kwargs(RNAStructure, {
+        "seq_file": args.sequence,
+        "out_file": pred_out,
+        "coinput_file": shape_file,
+        "executable": pred_exec,
+        **pred_params_cfg,
+    })
+    RNAStructure(**kw)
 
-    predictor_params = predictor_conf.get("params", {})
-    ensemble_params = ensemble_conf.get("params", {})
-    ct2dot_params = ct2dot_conf.get("params", {})
+elif ptool == "rnafold":
+    kw = filter_kwargs(RNAFold, {
+        "seq_file": args.sequence,
+        "out_file": pred_out,
+        "max_bp_span": pred_params_cfg.get("max_bp_span"),
+        "executable": pred_exec,
+        "coinput_file": shape_file,
+    })
+    RNAFold(**kw)
 
-    predictor_executable = predictor_conf.get("executable", predictor_key)
-    ensemble_executable = ensemble_conf.get("executable", ensemble_key)
-    ct2dot_executable = ct2dot_conf.get("executable", "ct2dot")
+else:
+    raise ValueError(f"Unsupported predictor tool: {args.predictor}")
 
-    # Override ensemble parameters if flags are provided.
-    if ensemble_key == "RNAStructure" and args.ens_maxm is not None:
-        ensemble_params["maxm"] = args.ens_maxm
-    if ensemble_key == "RNASubopt" and args.ens_par is not None:
-        ensemble_params["n_struc"] = args.ens_par
-    if ensemble_key == "EternaFold" and args.ens_nsamples is not None:
-        ensemble_params["nsamples"] = args.ens_nsamples
-    if ensemble_key == "LinearFold" and args.ens_delta is not None:
-        ensemble_params["delta"] = args.ens_delta
-
-    # Set available threads.
-    threads = env_config.get("threads", 1)
-    os.environ["OMP_NUM_THREADS"] = str(threads)
-    print(f"Using {threads} threads.")
-
-    seq_file = args.sequence
-    seq_basename = os.path.splitext(os.path.basename(seq_file))[0]
-    base = os.path.join(output_folder, seq_basename)
-
-    predictor_raw_out = f"{base}_{predictor_key}_final.raw"
-    predictor_db_out = f"{base}_{predictor_key}_final.db"
-    ensemble_raw_out = f"{base}_{args.ensemble}_ens.raw"
-    ensemble_db_out = f"{base}_{args.ensemble}_ens.db"
-
-    # Determine whether to run the ensemble predictor.
-    if args.shape:
-        shape_file = args.shape
-        print("Using provided SHAPE file:", shape_file)
-    else:
-        print(f"=== Running ensemble predictor: {args.ensemble} (using {ensemble_key}) ===")
-        if ensemble_key not in tool_functions:
-            sys.exit(f"Error: Function for ensemble tool '{ensemble_key}' is not implemented.")
-        ensemble_func = tool_functions[ensemble_key]
-
-        if ensemble_key == "RNASubopt":
-            ensemble_func(seq_file, ensemble_db_out, executable=ensemble_executable, **ensemble_params)
-        elif ensemble_key == "EternaFold":
-            ensemble_func(seq_file, ensemble_db_out, mode="sample", executable=ensemble_executable, **ensemble_params)
-        elif ensemble_key == "LinearFold":
-            ensemble_func(seq_file, ensemble_db_out, mode="ensemble", executable=ensemble_executable, **ensemble_params)
-        else:
-            ensemble_func(seq_file, ensemble_raw_out, executable=ensemble_executable, **ensemble_params)
-            if ensemble_key == "RNAStructure":
-                print("Converting RNAstructure CT file to DB file for ensemble...")
-                ct2dot(ensemble_raw_out, ensemble_db_out, ct2dot_folder=ct2dot_executable, **ct2dot_params)
-            else:
-                ensemble_db_out = ensemble_raw_out
-
-        print("Cleaning ensemble DB file...")
-        ensemble_db_out_copy = ensemble_db_out + ".copy"
-        shutil.copy(ensemble_db_out, ensemble_db_out_copy)
-        clean_ensemble_file(ensemble_db_out_copy, ensemble_db_out)
-        os.remove(ensemble_db_out_copy)
-
-        # Create shape file from ensemble DB file.
-        shape_file = f"{base}_shape.txt"
-        print("=== Creating shape file from ensemble DB file ===")
-        shape_config = config.get("ShapeConversion", {}).get("params", {})
-        thresholds = shape_config.get("thresholds", {})
-        coefficients = shape_config.get("coefficients", {})
-
-        if args.shape_threshold_high is not None:
-            thresholds["high"] = args.shape_threshold_high
-        if args.shape_threshold_medium is not None:
-            thresholds["medium"] = args.shape_threshold_medium
-        if args.shape_threshold_low is not None:
-            thresholds["low"] = args.shape_threshold_low
-        if args.shape_coeff_high is not None:
-            coefficients["high"] = args.shape_coeff_high
-        if args.shape_coeff_medium is not None:
-            coefficients["medium"] = args.shape_coeff_medium
-        if args.shape_coeff_low is not None:
-            coefficients["low"] = args.shape_coeff_low
-        if args.shape_coeff_default is not None:
-            coefficients["default"] = args.shape_coeff_default
-
-        create_shape_file(ensemble_db_out, shape_file, thresholds, coefficients)
-
-    print(f"=== Running predictor tool: {predictor_key} ===")
-    if predictor_key not in tool_functions:
-        sys.exit(f"Error: Function for predictor tool '{predictor_key}' is not implemented.")
-    predictor_func = tool_functions[predictor_key]
-    if predictor_key == "EternaFold":
-        convert_shape_to_bpseq(shape_file, f"{base}_shape.bpseq", seq_file)
-        predictor_func(f"{base}_shape.bpseq", predictor_db_out, mode="predict",
-                       executable=predictor_executable, **predictor_params)
-    elif predictor_key == "LinearFold":
-        predictor_func(seq_file, predictor_db_out, mode="predict",
-                       executable=predictor_executable, coinput_file=shape_file, **predictor_params)
-    else:
-        predictor_func(seq_file, predictor_raw_out, executable=predictor_executable,
-                       coinput_file=shape_file, **predictor_params)
-        if predictor_key == "RNAStructure":
-            print("Converting RNAstructure CT file to DB file for predictor...")
-            ct2dot(predictor_raw_out, predictor_db_out, ct2dot_folder=ct2dot_executable, **ct2dot_params)
-        else:
-            shutil.copy(predictor_raw_out, predictor_db_out)
-            os.remove(predictor_raw_out)
-
-    print("=== Pipeline execution completed. ===")
-    print(f"Predictor output (DB file): {predictor_db_out}")
-    if args.shape:
-        print("Ensemble step was skipped due to provided SHAPE file.")
-    else:
-        print(f"Ensemble output (DB file): {ensemble_db_out}")
-
-if __name__ == "__main__":
-    main()
+print("Pipeline completed – outputs in", os.path.abspath(args.output_folder))
+print("Result file:", os.path.abspath(pred_out))
