@@ -11,7 +11,6 @@ RNAStructure:
   executable: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/exe/Fold-smp"
   params:
     a: "m6A"
-    md: 60000 #make it not default
     maxm: 20
 
 RNAFold:
@@ -24,7 +23,7 @@ RNASubopt:
   executable: "RNAsubopt"
   params:
     n_struc: 20
-    method: "z" # default is zuker
+    method: "z" 
 
 EternaFold:
   executable: "./../EternaFold-master/src/contrafold"
@@ -36,11 +35,10 @@ EternaFold:
 LinearFold:
   executable: "./../LinearFold-master/linearfold"
   params: 
-    delta: 5.0 #implemented cutting if more then ens number
-    
-# -k command for RNAStrucutre
+    delta: 5.0
+
 ct2dot:
-  # Path to the RNAstructure "dot2ct" executable
+  # Path to the RNAstructure "ct2dot" executable
   executable: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/exe/ct2dot"
   params:
     st_num: 0

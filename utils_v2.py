@@ -7,16 +7,16 @@ def ct2dot(ct_file, db_file, st_num=0, ct2dot_folder="dot2ct"):
     print("Running:", command)
     os.system(command)
 
-def RNAStructure(seq_file, out_file, a="m6A", md=600, maxm=20, executable="/path/to/RNAStructure/fold-smp", coinput_file=None):
+def RNAStructure(seq_file, out_file, a="m6A", maxm=20, executable="/path/to/RNAStructure/fold-smp", coinput_file=None):
     """
     Runs RNAstructure.
     If coinput_file is provided, the command adds the '--SHAPE <coinput_file>' option.
     """
     if coinput_file:
-        command = (f"{executable} {seq_file} {out_file} -k -a {a} -md {md} -m {maxm} "
+        command = (f"{executable} {seq_file} {out_file} -k -a {a} -m {maxm} "
                    f"--SHAPE {coinput_file}")
     else:
-        command = f"{executable} {seq_file} {out_file} -k -a {a} -md {md} -m {maxm}"
+        command = f"{executable} {seq_file} {out_file} -k -a {a} -m {maxm}"
     print("Running RNAstructure command:", command)
     os.system(command)
 
