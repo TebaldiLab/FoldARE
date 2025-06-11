@@ -45,10 +45,10 @@ def clean_in_place(db_path: str):
 # -----------------------------------------------------------------------------
 parser = argparse.ArgumentParser(description="Sequence-level RNA prediction pipeline (ensemble → SHAPE → predictor)")
 parser.add_argument("-p", "--predictor", required=True,
-                    choices=["RNAFold", "RNAStructure", "EternaFold", "LinearFold"],
+                    choices=["ViennaRNA", "RNAStructure", "EternaFold", "LinearFold"],
                     help="Tool used for final prediction")
 parser.add_argument("-e", "--ensemble", required=True,
-                    choices=["RNAFold", "RNAStructure", "EternaFold", "LinearFold", "RNASubopt"],
+                    choices=["ViennaRNA", "RNAStructure", "EternaFold", "LinearFold"],
                     help="Tool that generates the ensemble")
 parser.add_argument("-s", "--sequence", required=True, help="Input FASTA file")
 parser.add_argument("-o", "--output_folder", default=".")
@@ -115,7 +115,7 @@ if args.shape is None:
     ens_db = os.path.join(args.output_folder, f"{base_name}_{args.ensemble}_ens.db")
     tool = args.ensemble.lower()
 
-    if tool == "rnasubopt":
+    if tool == "viennarna":
         RNASubopt(**filter_kwargs(RNASubopt, {
             "seq_file": args.sequence,
             "out_file": ens_db,
@@ -166,17 +166,6 @@ if args.shape is None:
             "out_file": ens_db,
             "executable": ens_exec,
             **ens_params_cfg,
-        }))
-        clean_in_place(ens_db)
-
-    elif tool == "rnafold":
-        # fallback: use RNASubopt behaviour
-        RNASubopt(**filter_kwargs(RNASubopt, {
-            "seq_file": args.sequence,
-            "out_file": ens_db,
-            "n_struc": nsamples,
-            "method": ens_params_cfg.get("method", "p"),
-            "executable": CFG.get("RNASubopt", {}).get("executable", "RNAsubopt"),
         }))
         clean_in_place(ens_db)
 
@@ -241,7 +230,7 @@ elif ptool == "rnastructure":
     })
     RNAStructure(**kw)
 
-elif ptool == "rnafold":
+elif ptool == "viennarna":
     kw = filter_kwargs(RNAFold, {
         "seq_file": args.sequence,
         "out_file": pred_out,
