@@ -8,6 +8,13 @@ from utils_v2 import (
     EternaFold, LinearFold, convert_shape_to_bpseq
 )
 
+LETTER_MAP = {
+    'E': "EternaFold",     # EternaFold
+    'V': "ViennaRNA",      # RNAsubopt from ViennaRNA
+    'R': "RNAStructure",   # RNAstructure
+    'L': "LinearFold",     # LinearFold
+}
+
 # -----------------------------------------------------------------------------
 # Helper utilities -------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -45,11 +52,11 @@ def clean_in_place(db_path: str):
 # -----------------------------------------------------------------------------
 parser = argparse.ArgumentParser(description="Sequence-level RNA prediction pipeline (ensemble → SHAPE → predictor)")
 parser.add_argument("-p", "--predictor", required=True,
-                    choices=["ViennaRNA", "RNAStructure", "EternaFold", "LinearFold"],
+                    choices=list(LETTER_MAP.keys()) + list(LETTER_MAP.values()),
                     help="Tool used for final prediction")
-parser.add_argument("-e", "--ensemble", required=True,
-                    choices=["ViennaRNA", "RNAStructure", "EternaFold", "LinearFold"],
-                    help="Tool that generates the ensemble")
+parser.add_argument( "-e", "--ensemble", required=True,
+                    choices=list(LETTER_MAP.keys()) + list(LETTER_MAP.values()),
+                    help="Ensemble tool (full name or letter: E, V, R, L)")
 parser.add_argument("-s", "--sequence", required=True, help="Input FASTA file")
 parser.add_argument("-o", "--output_folder", default=".")
 parser.add_argument("-c", "--config", default="config.yaml", help="YAML configuration file")
@@ -64,6 +71,10 @@ parser.add_argument("--ens_maxm", type=int)
 parser.add_argument("--ens_par", type=int)
 parser.add_argument("--ens_delta", type=float)
 args = parser.parse_args()
+if len(args.ensemble) == 1:
+    args.ensemble = LETTER_MAP[args.ensemble]
+if len(args.predictor) == 1:
+    args.predictor = LETTER_MAP[args.predictor]
 
 # -----------------------------------------------------------------------------
 # Config & environment ---------------------------------------------------------

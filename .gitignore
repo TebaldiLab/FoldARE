@@ -41,6 +41,7 @@ Thumbs.db
 *.fasta
 *.db
 *.txt
+*.csv
 
 # Generated files by the pipeline #
 ###################################
@@ -49,3 +50,7 @@ __pycache__
 # Jupyter Notebooks #
 #####################
 *.ipynb
+
+# html charts#
+#####################
+*.html

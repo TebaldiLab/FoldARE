@@ -23,7 +23,7 @@ RNASubopt:
   executable: "RNAsubopt"
   params:
     n_struc: 20
-    method: "z" 
+    method: "p" 
 
 EternaFold:
   executable: "./../EternaFold-master/src/contrafold"

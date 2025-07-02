@@ -1,5 +1,8 @@
 # sequence comparison commands
 
+import math
+from collections import Counter
+
 def parse_dot_bracket(dot_bracket):
     """
     Parses dot-bracket notation and returns a list where index i corresponds to the partner of nucleotide i.
@@ -148,3 +151,23 @@ def simple_similarity_score(struct1, struct2):
     
     score = match_count / len(struct1)
     return round(score, 5)
+
+
+def shannon_math(data, unit):
+    """
+    Compute Shannon entropy (no scipy). 
+    data: list of symbols.
+    unit: 'shannon', 'natural', or 'hartley'.
+    """
+    base = {'shannon': 2., 'natural': math.e, 'hartley': 10.}
+    if unit not in base:
+        raise ValueError(f"Unknown entropy unit '{unit}'")
+    if len(data) <= 1:
+        return 0.0
+    counts = Counter(data)
+    entropy = 0.0
+    for cnt in counts.values():
+        p = cnt / len(data)
+        if p > 0:
+            entropy -= p * math.log(p, base[unit])
+    return entropy
