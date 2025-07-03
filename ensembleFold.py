@@ -1,3 +1,45 @@
+#!/usr/bin/env python3
+"""
+ensembleFold.py
+
+2D RNA structure prediction pipeline (ensemble → SHAPE → predictor).
+
+Generate up to N RNA secondary structures (an “ensemble”) for a single input sequence,
+derive per-nucleotide SHAPE reactivities, and then run a final structure prediction.
+
+Workflow:
+ 1. **Ensemble generation** (`-e/--ensemble`, one of E, V, R, L):
+    - E (EternaFold): sample N structures
+    - V (ViennaRNA/RNASubopt): enumerate N suboptimal structures
+    - R (RNAstructure): output the MFE structure (warns if N>1)
+    - L (LinearFold): start with Δ=5.0, iteratively increment Δ by 1.0 until ≥N structures
+    • N is controlled by `--ens_n` or `global_ensemble_size` in config.yaml :contentReference[oaicite:0]{index=0}  
+    • The raw ensemble is “cleaned” and trimmed to exactly N dot-bracket entries
+
+ 2. **SHAPE reactivity generation**  
+    - Uses `create_shape_file()` from utils_v2 with thresholds & coefficients from config.yaml :contentReference[oaicite:1]{index=1}
+
+ 3. **Final prediction** (`-p/--predictor`, one of E, V, R, L):
+    - E (EternaFold): converts SHAPE→BPSEQ then predicts
+    - V (RNAFold/ViennaRNA): predicts directly with SHAPE input
+    - R (RNAstructure): predicts directly with SHAPE input
+    - L (LinearFold): predicts directly with SHAPE input
+
+Outputs (in `<output_folder>`):
+  • `<basename>_<ensemble>_ens.db`   — N dot-bracket structures  
+  • `<basename>_shape.txt`           — per-nucleotide SHAPE reactivities  
+  • `<basename>_<ensemble>_<predictor>_final.db` — final predicted structure  
+
+Usage example:
+    python ensembleFold.py \
+      -s sequence.fasta \
+      -e L \
+      -p R \
+      --ens_n 30 \
+      -c config.yaml \
+      -o results_dir \
+      --shape existing_shape.txt
+"""
 import os
 import argparse
 from inspect import signature
@@ -124,9 +166,9 @@ base_name = os.path.splitext(os.path.basename(args.sequence))[0]
 # -----------------------------------------------------------------------------
 if args.shape is None:
     ens_db = os.path.join(args.output_folder, f"{base_name}_{args.ensemble}_ens.db")
-    tool = args.ensemble.lower()
+    etool = args.ensemble.lower()
 
-    if tool == "viennarna":
+    if etool == "viennarna":
         RNASubopt(**filter_kwargs(RNASubopt, {
             "seq_file": args.sequence,
             "out_file": ens_db,
@@ -136,7 +178,7 @@ if args.shape is None:
         }))
         clean_in_place(ens_db)
 
-    elif tool == "eternafold":
+    elif etool == "eternafold":
         EternaFold(**filter_kwargs(EternaFold, {
             "seq_file": args.sequence,
             "out_file": ens_db,
@@ -147,7 +189,7 @@ if args.shape is None:
         }))
         clean_in_place(ens_db)
 
-    elif tool == "linearfold":
+    elif etool == "linearfold":
         desired = ensemble_target or nsamples or 1
         current_delta = delta
         tmp_db = ens_db + ".tmp"
@@ -171,7 +213,7 @@ if args.shape is None:
                 fh.writelines(lines[:desired])
         os.replace(tmp_db, ens_db)
 
-    elif tool == "rnastructure":
+    elif etool == "rnastructure":
         RNAStructure(**filter_kwargs(RNAStructure, {
             "seq_file": args.sequence,
             "out_file": ens_db,
@@ -184,7 +226,7 @@ if args.shape is None:
         raise ValueError(f"Unsupported ensemble tool: {args.ensemble}")
 
     # Post-trim for non-LinearFold multi-structure generators
-    if tool not in ["linearfold", "rnastructure"] and ensemble_target is not None:
+    if etool not in ["linearfold", "rnastructure"] and ensemble_target is not None:
         with open(ens_db) as fh:
             entries = fh.readlines()
         if len(entries) > ensemble_target:
@@ -207,7 +249,10 @@ else:
 # -----------------------------------------------------------------------------
 
 ptool = args.predictor.lower()
-pred_out = os.path.join(args.output_folder, f"{base_name}_{tool}_{ptool}_final.db")
+if args.shape is None:
+    pred_out = os.path.join(args.output_folder, f"{base_name}_{etool}_{ptool}_final.db")
+else:
+    pred_out = os.path.join(args.output_folder, f"{base_name}_customShape_{ptool}_final.db")
 
 if ptool == "eternafold":
     bpseq = os.path.join(args.output_folder, f"{base_name}_shape.bpseq")

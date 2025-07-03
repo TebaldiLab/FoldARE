@@ -10,6 +10,13 @@ aggregate each structure’s total score, rank them, and report:
  2. Top‐N structures CSV (if --top_n given)
  3. Positional consensus string & frequency
  4. Positional Shannon entropy plot (HTML)
+
+ Usage example:
+    python compare_all.py \
+      -s myseq.fasta \
+      -n 20 \
+      --top_n 5 \
+      -c config.yaml \
 """
 import argparse
 import os

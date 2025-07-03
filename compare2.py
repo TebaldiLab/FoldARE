@@ -1,4 +1,27 @@
 #!/usr/bin/env python3
+"""
+compare2.py
+
+Generate N structures from two chosen ensemble tools (EternaFold, RNAsubopt,
+RNAstructure, or LinearFold), then compute and visualize how they agree:
+
+ 1. Produce an interactive N×N Plotly heatmap (HTML) of all‐vs‐all pairwise
+    consensus scores between the two ensembles.
+ 2. Compute and plot positional Shannon entropy (HTML), showing variability
+    at each nucleotide position across the two sets.
+ 3. Compute and plot positional consensus score (HTML), the fraction of
+    structures agreeing at each position.
+ 4. Optionally, extract the top-K best structures by average consensus and
+    write them to a CSV.
+
+Usage example:
+    python compare2.py \
+      -s myseq.fasta \
+      -e1 E -e2 V \
+      -n 20 \
+      --top_n 5 \
+      -c config.yaml \
+"""
 import argparse
 import tempfile
 import os
