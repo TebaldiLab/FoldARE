@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 #### it must return n number of best couples
-#### force matrix cell to be sequare
 """
 compare2.py
 
@@ -200,9 +199,9 @@ def main():
                 zrow.append(score)
                 hover = (
                     f"consensus_score = {score:.3f}<br>"
-                    f"seq = {seq[:20]}{'...' if len(seq)>20 else ''}<br>"
-                    f"{rows[i]} – {s1}<br>"
-                    f"{cols[j]} – {s2}"
+                    f"seq = {seq[:70]}{'/' if len(seq)>70 else ''}<br>"
+                    f"{rows[i]}{' ' if len(rows[i])>2 else '  '}– {s1[:70]}{'/' if len(s1)>70 else ''}<br>"
+                    f"{cols[j]}{' ' if len(cols[j])>2 else '  '}– {s2[:70]}{'/' if len(s2)>70 else ''}"
                 )
                 trow.append(hover)
             z.append(zrow)
@@ -211,13 +210,33 @@ def main():
         fig = go.Figure(data=go.Heatmap(
             z=z, x=cols, y=rows,
             hoverinfo="text", text=text,
-            colorbar=dict(title="Consensus")
+            colorbar=dict(title="Consensus"),
+            hoverlabel = dict(
+            font=dict(
+                family="Courier New",
+                color="black",
+                size=14
+            ),
+            bgcolor="white"
+        ),
+        #font to monospace
+        colorscale='Turbo',
+            textfont=dict(family="Courier New", size=12)
         ))
         fig.update_layout(
             title=f"Consensus heatmap: {letter_map[e1]} vs {letter_map[e2]} (top {ens_n})",
             xaxis_title=f"{e2} structures",
             yaxis_title=f"{e1} structures"
+            # ensure square cells
         )
+        fig.update_xaxes(tickangle=-45, tickmode='array', tickvals=cols)
+        fig.update_yaxes(tickmode='array', tickvals=rows)
+        fig.update_layout(
+            width=1000, height=1000,
+            margin=dict(l=50, r=50, t=50, b=50),
+            autosize=False
+        )
+        fig.update_layout(font_family="Courier New")
 
         fig.write_html(f"{base}_heatmap.html", auto_open=False)
         print("Wrote heatmap to", f"{base}_heatmap.html")
@@ -297,6 +316,10 @@ def main():
                         f"pos={i}<br>nt={seq[i-1]}<br>H={pos_ent1[i-1]:.3f}"
                         for i in xs
                     ],
+                    hoverlabel = dict(
+                        font=dict(
+                            family="Courier New",
+                            size=14)),
                     line=dict(color=ENSEMBLE_COLORS[e1]),
                     marker=dict(color=ENSEMBLE_COLORS[e1])
                 ),
@@ -313,11 +336,16 @@ def main():
                         f"pos={i}<br>nt={seq[i-1]}<br>H={pos_ent2[i-1]:.3f}"
                         for i in xs
                     ],
+                    hoverlabel = dict(
+                        font=dict(
+                            family="Courier New",
+                            size=14)),
                     line=dict(color=ENSEMBLE_COLORS[e2]),
                     marker=dict(color=ENSEMBLE_COLORS[e2])
                 ),
                 row=r+1, col=1
             )
+        fig_e.update_layout(font_family="Courier New")    
 
         fig_e.update_layout(
             title_text=(
@@ -374,7 +402,7 @@ def main():
                 ),
                 row=r+1, col=1
             )
-
+        fig_c.update_layout(font_family="Courier New")
         fig_c.update_layout(title_text="Positional Consensus Score")
         fig_c.write_html(f"{base}_positional_consensus.html", auto_open=False)
         print("Wrote positional consensus plot to", f"{base}_positional_consensus.html")

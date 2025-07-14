@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-### plot of consensus score and entropy mube be always 0 to 1
 """
 compare_all.py
 
@@ -242,6 +241,10 @@ def main():
                         f"pos={i}<br>nt={seq[i-1]}<br>cons={cons_scores[i-1]:.3f}"
                         for i in range(1, Lseq+1)
                     ],
+                    hoverlabel = dict(
+                        font=dict(
+                            family="Courier New",
+                            size=14)),
                     hoverinfo='text',
                     line=dict(color='purple'),
                     marker=dict(color='purple')
@@ -250,9 +253,10 @@ def main():
             fig_cons.update_layout(
                 title=f"Positional Consensus Score (top {top_n})",
                 xaxis_title="Position",
-                yaxis_title="Consensus Score"
+                yaxis_title="Consensus Score",
+                yaxis=dict(range=[0, 1.05])
             )
-
+            fig_cons.update_layout(font_family="Courier New")
             cons_html = f"{base}_positional_consensus_all.html"
             fig_cons.write_html(cons_html, auto_open=False)
             print("Wrote positional consensus plot to", cons_html)
