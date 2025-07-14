@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+### plot of consensus score and entropy mube be always 0 to 1
 """
 compare_all.py
 
@@ -26,9 +27,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 import math
 from collections import Counter
-from compare_utils import simple_similarity_score as consensus_score
-
-import utils_v2  # must have consensus_score, extract_ensemble, RNASubopt, EternaFold, RNAStructure, LinearFold
+import utils
 import plotly.graph_objects as go
 
 # ─── Letter‐to‐tool & colors ───────────────────────────────────────────────────
@@ -86,14 +85,14 @@ def generate_ensemble(letter, seq, out_db, M, cfg):
 
     # call the appropriate wrapper
     if letter == 'V':
-        utils_v2.RNASubopt(
+        utils.RNASubopt(
             seq_file=seq, out_file=tmp_db,
             executable=exe,
             n_struc=M,
             method=params.get('method')
         )
     elif letter == 'E':
-        utils_v2.EternaFold(
+        utils.EternaFold(
             seq_file=seq, out_file=tmp_db,
             mode="sample",
             executable=exe,
@@ -102,27 +101,27 @@ def generate_ensemble(letter, seq, out_db, M, cfg):
             nsamples=M
         )
     elif letter == 'R':
-        utils_v2.RNAStructure(
+        utils.RNAStructure(
             seq_file=seq, out_file=tmp_db,
             executable=exe,
             a=params.get('a'),
             maxm=params.get('maxm'),
         )
         # warn if fewer than M
-        full = utils_v2.extract_ensemble(tmp_db)
+        full = utils.extract_ensemble(tmp_db)
         if len(full) < M:
             print(f"WARNING: RNAstructure produced only {len(full)} (requested {M})")
     elif letter == 'L':
         # iterative‐delta until >= M
         delta = params.get('delta', 5.0)
         while True:
-            utils_v2.LinearFold(
+            utils.LinearFold(
                 seq_file=seq, out_file=tmp_db,
                 mode="ensemble",
                 executable=exe,
                 delta=delta
             )
-            full = utils_v2.extract_ensemble(tmp_db)
+            full = utils.extract_ensemble(tmp_db)
             if len(full) >= M:
                 break
             delta += 1.0
@@ -130,7 +129,7 @@ def generate_ensemble(letter, seq, out_db, M, cfg):
         raise ValueError(f"Unknown letter: {letter}")
 
     # extract & trim
-    full = utils_v2.extract_ensemble(tmp_db)
+    full = utils.extract_ensemble(tmp_db)
     trimmed = full[:M]
     with open(out_db, 'w') as fh:
         fh.write("\n".join(trimmed) + "\n")
@@ -190,7 +189,7 @@ def main():
                 if i == j: 
                     continue
                 sj = all_structs[j]['struct']
-                score = consensus_score(si, sj)
+                score = utils.simple_similarity_score(si, sj)
                 agg[idi] += score
 
         # prepare ranking

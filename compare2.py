@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+#### it must return n number of best couples
+#### force matrix cell to be sequare
 """
 compare2.py
 
@@ -11,7 +13,7 @@ RNAstructure, or LinearFold), then compute and visualize how they agree:
     at each nucleotide position across the two sets.
  3. Compute and plot positional consensus score (HTML), the fraction of
     structures agreeing at each position.
- 4. Optionally, extract the top-K best structures by average consensus and
+ 4. Optionally, extract the top-N best structures by average consensus and
     write them to a CSV.
 
 Usage example:
@@ -28,13 +30,10 @@ import os
 import shutil
 from pathlib import Path
 
-from compare_utils import simple_similarity_score as consensus_score
-from compare_utils import shannon_math
-
 from collections import Counter
 
 from ruamel.yaml import YAML
-import utils_v2
+import utils
 
 letter_map = {'E': 'EternaFold',
                 'V': 'RNASubopt',
@@ -79,7 +78,7 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
     tmp_db = out_db + ".tmp"
 
     if letter == 'V':  # RNAsubopt
-        utils_v2.RNASubopt(
+        utils.RNASubopt(
             seq_file=seq,
             out_file=tmp_db,
             executable=exe,
@@ -88,7 +87,7 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
         )
 
     elif letter == 'E':  # EternaFold
-        utils_v2.EternaFold(
+        utils.EternaFold(
             seq_file=seq,
             out_file=tmp_db,
             mode="sample",
@@ -99,14 +98,14 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
         )
 
     elif letter == 'R':  # RNAstructure → warning if < N
-        utils_v2.RNAStructure(
+        utils.RNAStructure(
             seq_file=seq,
             out_file=tmp_db,
             executable=exe,
             a=params.get('a'),
             maxm=params.get('maxm')
         )
-        full_list = utils_v2.extract_ensemble(tmp_db)
+        full_list = utils.extract_ensemble(tmp_db)
         if len(full_list) < ens_n:
             print(f"WARNING: RNAStructure produced only {len(full_list)} structures (requested {ens_n})")
         trimmed = full_list[:ens_n]
@@ -118,14 +117,14 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
         desired       = ens_n
         current_delta = params.get('delta', 5.0)
         while True:
-            utils_v2.LinearFold(
+            utils.LinearFold(
                 seq_file=seq,
                 out_file=tmp_db,
                 mode="ensemble",
                 executable=exe,
                 delta=current_delta
             )
-            full_list = utils_v2.extract_ensemble(tmp_db)
+            full_list = utils.extract_ensemble(tmp_db)
             if len(full_list) >= desired:
                 break
             current_delta += 1.0
@@ -139,7 +138,7 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
         raise ValueError(f"Unknown ensemble letter: {letter}")
 
     # Extract the dot-bracket lines and trim to top_n
-    full_list = utils_v2.extract_ensemble(tmp_db)
+    full_list = utils.extract_ensemble(tmp_db)
     trimmed   = full_list[:ens_n]
     with open(out_db, 'w') as fh:
         fh.write("\n".join(trimmed) + "\n")
@@ -197,7 +196,7 @@ def main():
         for i, s1 in enumerate(structs1):
             zrow, trow = [], []
             for j, s2 in enumerate(structs2):
-                score = consensus_score(s1, s2)
+                score = utils.simple_similarity_score(s1, s2)
                 zrow.append(score)
                 hover = (
                     f"consensus_score = {score:.3f}<br>"
@@ -227,7 +226,7 @@ def main():
         # Compute global entropy for each ensemble
         size1 = len(structs1[0])
         entropy_list1 = [
-            shannon_math([s[i] for s in structs1], unit="shannon")
+            utils.shannon_math([s[i] for s in structs1], unit="shannon")
             for i in range(size1)
         ]
         global_ent1 = sum(entropy_list1) / size1
@@ -235,7 +234,7 @@ def main():
         # Ensemble 2 average positional entropy
         size2 = len(structs2[0])
         entropy_list2 = [
-            shannon_math([s[i] for s in structs2], unit="shannon")
+            utils.shannon_math([s[i] for s in structs2], unit="shannon")
             for i in range(size2)
         ]
         global_ent2 = sum(entropy_list2) / size2
@@ -257,8 +256,8 @@ def main():
             col1 = [s[i] for s in structs1]
             col2 = [s[i] for s in structs2]
             # entropy
-            pos_ent1.append(shannon_math(col1, unit="shannon"))
-            pos_ent2.append(shannon_math(col2, unit="shannon"))
+            pos_ent1.append(utils.shannon_math(col1, unit="shannon"))
+            pos_ent2.append(utils.shannon_math(col2, unit="shannon"))
             # consensus = fraction of the most common symbol
             c1 = Counter(col1)
             c2 = Counter(col2)
@@ -385,13 +384,13 @@ def main():
         # Ensemble 1 average consensus
             avg_cons1 = []
             for idx, s1 in enumerate(structs1, start=1):
-                scores = [consensus_score(s1, s2) for s2 in structs2]
+                scores = [utils.simple_similarity_score(s1, s2) for s2 in structs2]
                 avg_cons1.append((idx, s1, sum(scores)/len(scores)))
 
             # Ensemble 2 average consensus
             avg_cons2 = []
             for idx, s2 in enumerate(structs2, start=1):
-                scores = [consensus_score(s1, s2) for s1 in structs1]
+                scores = [utils.simple_similarity_score(s1, s2) for s1 in structs1]
                 avg_cons2.append((idx, s2, sum(scores)/len(scores)))
 
             # sort descending by avg consensus

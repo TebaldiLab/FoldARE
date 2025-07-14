@@ -44,8 +44,8 @@ import os
 import argparse
 from inspect import signature
 from ruamel.yaml import YAML
-from utils_v2 import (
-    RNAStructure, RNAFold, ct2dot, RNASubopt,
+from utils import (
+    RNAStructure, RNAFold, RNASubopt,
     clean_ensemble_file, create_shape_file,
     EternaFold, LinearFold, convert_shape_to_bpseq
 )
