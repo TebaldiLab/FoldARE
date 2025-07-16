@@ -114,9 +114,17 @@ parser.add_argument("--ens_par", type=int)
 parser.add_argument("--ens_delta", type=float)
 args = parser.parse_args()
 if len(args.ensemble) == 1:
-    args.ensemble = LETTER_MAP[args.ensemble]
+    if LETTER_MAP[args.predictor] == "ViennaRNA":
+        # Special case for ViennaRNA, which uses RNASubopt
+        args.ensemble = "RNASubopt"
+    else:
+        args.ensemble = LETTER_MAP[args.ensemble]
 if len(args.predictor) == 1:
-    args.predictor = LETTER_MAP[args.predictor]
+    if LETTER_MAP[args.predictor] == "ViennaRNA":
+        # Special case for ViennaRNA, which uses RNASubopt
+        args.predictor = "RNAFold"
+    else:
+        args.predictor = LETTER_MAP[args.predictor]
 
 # -----------------------------------------------------------------------------
 # Config & environment ---------------------------------------------------------
@@ -168,7 +176,7 @@ if args.shape is None:
     ens_db = os.path.join(args.output_folder, f"{base_name}_{args.ensemble}_ens.db")
     etool = args.ensemble.lower()
 
-    if etool == "viennarna":
+    if etool == "rnasubopt":
         RNASubopt(**filter_kwargs(RNASubopt, {
             "seq_file": args.sequence,
             "out_file": ens_db,
@@ -286,16 +294,17 @@ elif ptool == "rnastructure":
     })
     RNAStructure(**kw)
 
-elif ptool == "viennarna":
+elif ptool == "rnafold":
     kw = filter_kwargs(RNAFold, {
         "seq_file": args.sequence,
         "out_file": pred_out,
+        "method": pred_params_cfg.get("method", "z"),  # Default to 'z' if not specified
         "max_bp_span": pred_params_cfg.get("max_bp_span"),
         "executable": pred_exec,
         "coinput_file": shape_file,
     })
     RNAFold(**kw)
-
+    print(pred_params_cfg.get("method", "z"))
 else:
     raise ValueError(f"Unsupported predictor tool: {args.predictor}")
 

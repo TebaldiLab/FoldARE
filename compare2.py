@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-#### it must return n number of best couples
 """
 compare2.py
 
@@ -12,7 +11,7 @@ RNAstructure, or LinearFold), then compute and visualize how they agree:
     at each nucleotide position across the two sets.
  3. Compute and plot positional consensus score (HTML), the fraction of
     structures agreeing at each position.
- 4. Optionally, extract the top-N best structures by average consensus and
+ 4. Optionally, extract the top-N best pairs of structures by average consensus and
     write them to a CSV.
 
 Usage example:
@@ -191,12 +190,14 @@ def main():
         z, text = [], []
         rows = [f"{e1}{ens_n-i}" for i in range(ens_n)]
         cols = [f"{e2}{j+1}" for j in range(ens_n)]
+        pair_scores = []  
 
         for i, s1 in enumerate(structs1):
             zrow, trow = [], []
             for j, s2 in enumerate(structs2):
                 score = utils.simple_similarity_score(s1, s2)
                 zrow.append(score)
+                pair_scores.append((rows[i], cols[j], s1, s2, score))
                 hover = (
                     f"consensus_score = {score:.3f}<br>"
                     f"seq = {seq[:70]}{'/' if len(seq)>70 else ''}<br>"
@@ -238,8 +239,8 @@ def main():
         )
         fig.update_layout(font_family="Courier New")
 
-        fig.write_html(f"{base}_heatmap.html", auto_open=False)
-        print("Wrote heatmap to", f"{base}_heatmap.html")
+        fig.write_html(f"{base}_compare2_heatmap.html", auto_open=False)
+        print("Wrote heatmap to", f"{base}_compare2_heatmap.html")
 
         # ─── Positional entropy & consensus ───────────────────────────────────────────
         # Compute global entropy for each ensemble
@@ -353,7 +354,8 @@ def main():
                 f"(global: {letter_map[e1]}={global_ent1:.3f}, {letter_map[e2]}={global_ent2:.3f})"
             )
         )
-        fig_e.write_html(f"{base}_positional_entropy.html", auto_open=False)
+        fig_e.write_html(f"{base}_compare2_positional_entropy.html", auto_open=False)
+        print("Wrote positional entropy plot to", f"{base}_compare2_positional_entropy.html")
 
 
         # Positional consensus plot
@@ -404,41 +406,25 @@ def main():
             )
         fig_c.update_layout(font_family="Courier New")
         fig_c.update_layout(title_text="Positional Consensus Score")
-        fig_c.write_html(f"{base}_positional_consensus.html", auto_open=False)
-        print("Wrote positional consensus plot to", f"{base}_positional_consensus.html")
+        fig_c.write_html(f"{base}_compare2_positional_consensus.html", auto_open=False)
+        print("Wrote positional consensus plot to", f"{base}_compare2_positional_consensus.html")
 
 
         if top_n:
-        # Ensemble 1 average consensus
-            avg_cons1 = []
-            for idx, s1 in enumerate(structs1, start=1):
-                scores = [utils.simple_similarity_score(s1, s2) for s2 in structs2]
-                avg_cons1.append((idx, s1, sum(scores)/len(scores)))
+            # Sort all pairs by consensus score, descending
+            pair_scores.sort(key=lambda x: x[4], reverse=True)
 
-            # Ensemble 2 average consensus
-            avg_cons2 = []
-            for idx, s2 in enumerate(structs2, start=1):
-                scores = [utils.simple_similarity_score(s1, s2) for s1 in structs1]
-                avg_cons2.append((idx, s2, sum(scores)/len(scores)))
-
-            # sort descending by avg consensus
-            avg_cons1.sort(key=lambda x: x[2], reverse=True)
-            avg_cons2.sort(key=lambda x: x[2], reverse=True)
-
-            # take top_n (but no more than available)
-            top1 = avg_cons1[:min(top_n, len(avg_cons1))]
-            top2 = avg_cons2[:min(top_n, len(avg_cons2))]
-
-            # write to CSV
-            best_file = base + "_best_structures.csv"
+            # Take top_n best pairs (no duplicates)
+            best_pairs = pair_scores[:min(top_n, len(pair_scores))]
+            
+            # Write to CSV
+            best_file = base + "_compare2_best_pairs.csv"
             with open(best_file, 'w') as fh:
-                fh.write("ensemble,index,structure,avg_consensus\n")
-                for idx, struct, cons in top1:
-                    fh.write(f"{e1},{idx},{struct},{cons:.3f}\n")
-                for idx, struct, cons in top2:
-                    fh.write(f"{e2},{idx},{struct},{cons:.3f}\n")
+                fh.write(f"{e1}_index,{e2}_index,{e1}_structure,{e2}_structure,consensus_score\n")
+                for i, j, s1, s2, score in best_pairs:
+                    fh.write(f"{i},{j},{s1},{s2},{score:.3f}\n")
 
-            print(f"Wrote top {len(top1)} + {len(top2)} best structures to {best_file}")
+            print(f"Wrote top {len(best_pairs)} best structure pairs to {best_file}")
 
 
     finally:

@@ -22,21 +22,21 @@ def RNAStructure(seq_file, out_file, a="m6A", maxm=20, executable="/path/to/RNAS
     print("Running RNAstructure command:", command)
     os.system(command)
 
-def RNAFold(seq_file, out_file, max_bp_span=600, executable="RNAfold", coinput_file=None):
+def RNAFold(seq_file, out_file, max_bp_span=600, executable="RNAfold", method="mfe", coinput_file=None):
     """
     Runs RNAfold.
     If coinput_file is provided, the command adds the '--shape <coinput_file>' option.
     """
     if coinput_file:
-        command = (f"{executable} -m -p --noPS --noDP --maxBPspan={max_bp_span} "
+        command = (f"{executable} -m{' -p' if method == 'p' else ''} --noPS {'--noDP' if method == 'p' else ''} --maxBPspan={max_bp_span} "
                    f"--shape {coinput_file} {seq_file} > {out_file}")
     else:
-        command = f"{executable} -m -p --noPS --noDP --maxBPspan={max_bp_span} {seq_file} > {out_file}"
+        command = f"{executable} -m{' -p' if method == 'p' else ''} --noPS {'--noDP' if method == 'p' else ''} --maxBPspan={max_bp_span} {seq_file} > {out_file}"
     print("Running RNAfold command:", command)
     os.system(command)
 
 def RNASubopt(seq_file, out_file, n_struc=20, method='p', executable="RNAsubopt"):
-    command = f"{executable} -{method} {n_struc} -s < {seq_file} > {out_file}"
+    command = f"{executable}{' -p' if method == 'p' else ' -z'} {n_struc if method == 'p' else ''} -s < {seq_file} > {out_file}"
     print("Running RNAsubopt command:", command)
     os.system(command)
 

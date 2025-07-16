@@ -8,7 +8,7 @@ aggregate each structure’s total score, rank them, and report:
 
  1. CSV of all structures sorted by aggregate consensus (highest first)
  2. Top‐N structures CSV (if --top_n given)
- 3. Positional consensus string & frequency
+ 3. Positional consensus score plot (HTML)
  4. Positional Shannon entropy plot (HTML)
 
  Usage example:
@@ -197,7 +197,7 @@ def main():
                         reverse=True)
 
         # write full ranking CSV
-        full_csv = f"{base}_ranked.csv"
+        full_csv = f"{base}_compare_all_ranked.csv"
         with open(full_csv, 'w') as fh:
             fh.write("id,method,index,structure,agg_score\n")
             for e in ranked:
@@ -207,7 +207,7 @@ def main():
 
         # if top_n, write top structures CSV
         if top_n:
-            top_csv = f"{base}_top{top_n}.csv"
+            top_csv = f"{base}_compare_all_top{top_n}.csv"
             with open(top_csv, 'w') as fh:
                 fh.write("id,method,index,structure,agg_score\n")
                 for e in ranked[:top_n]:
@@ -217,10 +217,12 @@ def main():
 
             # positional consensus & entropy across top_n
             top_structs = [e['struct'] for e in ranked[:top_n]]
+            all_structs = [e['struct'] for e in ranked]
             Lseq = len(seq)
             # consensus freq per position
             cons_scores = []
-            entp        = []
+            entp = []
+            freq = {".": [], "(": [], ")": []}
             for i in range(Lseq):
                 col = [s[i] for s in top_structs]
                 counts = Counter(col)
@@ -229,16 +231,34 @@ def main():
                 cons_scores.append(cnt / len(top_structs))
                 # entropy as before
                 entp.append(shannon_math(col, unit="shannon"))
+                # frequency of all symbols
+                for sym in freq:
+                    freq[sym].append(counts.get(sym, 0) / len(top_structs))
+
+            entp_all = []
+            cons_scores_all = []
+            freq_all = {".": [], "(": [], ")": []}
+            for i in range(Lseq):
+                col = [s[i] for s in all_structs]
+                counts = Counter(col)
+                most, cnt = counts.most_common(1)[0]
+                # consensus score = fraction of structures agreeing on the most common symbol
+                cons_scores_all.append(cnt / len(all_structs))
+                # entropy as before
+                entp_all.append(shannon_math(col, unit="shannon"))
+                # frequency of all symbols
+                for sym in freq_all:
+                    freq_all[sym].append(counts.get(sym, 0) / len(all_structs))
 
             # build an interactive Plotly chart for consensus score
             fig_cons = go.Figure(
                 go.Scatter(
                     x=list(range(1, Lseq+1)),
-                    y=cons_scores,
+                    y=cons_scores_all,
                     mode='lines+markers',
                     name='Positional consensus',
                     hovertext=[
-                        f"pos={i}<br>nt={seq[i-1]}<br>cons={cons_scores[i-1]:.3f}"
+                        f"pos={i}<br>nt={seq[i-1]}<br>cons={cons_scores_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
                         for i in range(1, Lseq+1)
                     ],
                     hoverlabel = dict(
@@ -251,15 +271,46 @@ def main():
                 )
             )
             fig_cons.update_layout(
-                title=f"Positional Consensus Score (top {top_n})",
+                title=f"Positional Consensus Score",
                 xaxis_title="Position",
                 yaxis_title="Consensus Score",
-                yaxis=dict(range=[0, 1.05])
+                yaxis=dict(range=[-0.05, 1.05])
             )
             fig_cons.update_layout(font_family="Courier New")
-            cons_html = f"{base}_positional_consensus_all.html"
+            cons_html = f"{base}_compare_all_positional_consensus.html"
             fig_cons.write_html(cons_html, auto_open=False)
             print("Wrote positional consensus plot to", cons_html)
+
+            # build an interactive Plotly chart for positional entropy
+            fig_ent = go.Figure(
+                go.Scatter(
+                    x=list(range(1, Lseq+1)),
+                    y=entp_all,
+                    mode='lines+markers',
+                    name='Positional entropy',
+                    hovertext=[
+                        f"pos={i}<br>nt={seq[i-1]}<br>entropy={entp_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
+                        for i in range(1, Lseq+1)
+                    ],
+                    hoverlabel = dict(
+                        font=dict(
+                            family="Courier New",
+                            size=14)),
+                    hoverinfo='text',
+                    line=dict(color='orange'),
+                    marker=dict(color='orange')
+                )
+            )
+            fig_ent.update_layout(
+                title=f"Positional Shannon Entropy",
+                xaxis_title="Position",
+                yaxis_title="Entropy (shannon)",
+                yaxis=dict(range=[-0.05, max(entp_all) * 1.05])
+            )
+            fig_ent.update_layout(font_family="Courier New")
+            ent_html = f"{base}_compare_all_positional_entropy.html"
+            fig_ent.write_html(ent_html, auto_open=False)
+            print("Wrote positional entropy plot to", ent_html)
 
     finally:
         shutil.rmtree(tmpdir)

@@ -18,12 +18,13 @@ RNAFold:
   executable: "RNAfold"
   params:
     max_bp_span: 0
+    method: "mfe" # 'mfe' for default mode, 'p' for partition function mode 
 
 RNASubopt:
   executable: "RNAsubopt"
   params:
-    n_struc: 20
-    method: "p" 
+    n_struc: 20 # Number of structures to generate, works only of probability-based mode
+    method: "p" # 'z' Zuker suboptionals mode (default), 'p' for probability-based mode
 
 EternaFold:
   executable: "./../EternaFold-master/src/contrafold"
