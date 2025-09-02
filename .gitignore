@@ -40,6 +40,8 @@ Thumbs.db
 ############################
 *.fasta
 *.db
+*.bpseq
+*.sub
 *.txt
 *.csv
 

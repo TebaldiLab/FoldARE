@@ -1,4 +1,6 @@
 # config.yaml
+# add different scoring options
+# introduce V6 and R6 functions
 
 environment:   
   data_tables: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/data_tables/"  # Path to data tables

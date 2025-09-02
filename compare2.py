@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# solve the promlem with very long sequences
 """
 compare2.py
 
@@ -201,8 +202,8 @@ def main():
                 hover = (
                     f"consensus_score = {score:.3f}<br>"
                     f"seq = {seq[:70]}{'/' if len(seq)>70 else ''}<br>"
-                    f"{rows[i]}{' ' if len(rows[i])>2 else '  '}– {s1[:70]}{'/' if len(s1)>70 else ''}<br>"
-                    f"{cols[j]}{' ' if len(cols[j])>2 else '  '}– {s2[:70]}{'/' if len(s2)>70 else ''}"
+                    f"{rows[i][0] + '0' + rows[i][1:] if int(rows[i][1:]) < 10 else rows[i]} – {s1[:70]}{'/' if len(s1)>70 else ''}<br>"
+                    f"{cols[j][0] + '0' + cols[j][1:] if int(cols[j][1:]) < 10 else cols[j]} – {s2[:70]}{'/' if len(s2)>70 else ''}"
                 )
                 trow.append(hover)
             z.append(zrow)
@@ -221,7 +222,7 @@ def main():
             bgcolor="white"
         ),
         #font to monospace
-        colorscale='Turbo',
+        colorscale='Blues',
             textfont=dict(family="Courier New", size=12)
         ))
         fig.update_layout(
@@ -314,7 +315,7 @@ def main():
                     mode='lines+markers',
                     name=f"{letter_map[e1]} entropy",
                     hovertext=[
-                        f"pos={i}<br>nt={seq[i-1]}<br>H={pos_ent1[i-1]:.3f}"
+                        f"pos={'0' + str(i) if int(i) < 10 else str(i)}<br>nt={seq[i-1]}<br>H={pos_ent1[i-1]:.3f}"
                         for i in xs
                     ],
                     hoverlabel = dict(
@@ -334,7 +335,7 @@ def main():
                     mode='lines+markers',
                     name=f"{letter_map[e2]} entropy",
                     hovertext=[
-                        f"pos={i}<br>nt={seq[i-1]}<br>H={pos_ent2[i-1]:.3f}"
+                        f"pos={'0' + str(i) if int(i) < 10 else str(i)}<br>nt={seq[i-1]}<br>H={pos_ent2[i-1]:.3f}"
                         for i in xs
                     ],
                     hoverlabel = dict(
@@ -380,7 +381,7 @@ def main():
                     mode='lines+markers',
                     name=f"{letter_map[e1]} consensus",
                     hovertext=[
-                        f"pos={i}<br>nt={seq[i-1]}<br>cons={pos_cons1[i-1]:.3f}"
+                        f"pos={'0' + str(i) if int(i) < 10 else str(i)}<br>nt={seq[i-1]}<br>cons={pos_cons1[i-1]:.3f}"
                         for i in xs
                     ],
                     line=dict(color=ENSEMBLE_COLORS[e1]),
@@ -396,7 +397,7 @@ def main():
                     mode='lines+markers',
                     name=f"{letter_map[e2]} consensus",
                     hovertext=[
-                        f"pos={i}<br>nt={seq[i-1]}<br>cons={pos_cons2[i-1]:.3f}"
+                        f"pos={'0' + str(i) if int(i) < 10 else str(i)}<br>nt={seq[i-1]}<br>cons={pos_cons2[i-1]:.3f}"
                         for i in xs
                     ],
                     line=dict(color=ENSEMBLE_COLORS[e2]),
@@ -405,9 +406,9 @@ def main():
                 row=r+1, col=1
             )
         fig_c.update_layout(font_family="Courier New")
-        fig_c.update_layout(title_text="Positional Consensus Score")
-        fig_c.write_html(f"{base}_compare2_positional_consensus.html", auto_open=False)
-        print("Wrote positional consensus plot to", f"{base}_compare2_positional_consensus.html")
+        fig_c.update_layout(title_text="Structural Consensus Score")
+        fig_c.write_html(f"{base}_compare2_structural_consensus.html", auto_open=False)
+        print("Wrote structural consensus plot to", f"{base}_compare2_structural_consensus.html")
 
 
         if top_n:
@@ -422,7 +423,7 @@ def main():
             with open(best_file, 'w') as fh:
                 fh.write(f"{e1}_index,{e2}_index,{e1}_structure,{e2}_structure,consensus_score\n")
                 for i, j, s1, s2, score in best_pairs:
-                    fh.write(f"{i},{j},{s1},{s2},{score:.3f}\n")
+                    fh.write(f"{i[0] + '0' + i[1:] if int(i[1:]) < 10 else i},{j[0] + '0' + j[1:] if int(j[1:]) < 10 else j},{s1},{s2},{score:.3f}\n")
 
             print(f"Wrote top {len(best_pairs)} best structure pairs to {best_file}")
 

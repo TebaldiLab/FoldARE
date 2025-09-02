@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# make and aggregate score for TOP N structures
 """
 compare_all.py
 
@@ -201,7 +202,7 @@ def main():
         with open(full_csv, 'w') as fh:
             fh.write("id,method,index,structure,agg_score\n")
             for e in ranked:
-                fh.write(f"{e['id']},{e['letter']},{e['index']},"
+                fh.write(f"{e['id'][0] + '0' + e['id'][1:] if int(e['id'][1:]) < 10 else e['id']}, {e['letter']},{'0' + str(e['index']) if e['index'] < 10 else e['index']},"
                          f"{e['struct']},{agg[e['id']]:.5f}\n")
         print("Wrote full ranking to", full_csv)
 
@@ -211,8 +212,8 @@ def main():
             with open(top_csv, 'w') as fh:
                 fh.write("id,method,index,structure,agg_score\n")
                 for e in ranked[:top_n]:
-                    fh.write(f"{e['id']},{e['letter']},{e['index']},"
-                             f"{e['struct']},{agg[e['id']]:.5f}\n")
+                    fh.write(f"{e['id'][0] + '0' + e['id'][1:] if int(e['id'][1:]) < 10 else e['id']}, {e['letter']},{'0' + str(e['index']) if e['index'] < 10 else e['index']},"
+                         f"{e['struct']},{agg[e['id']]:.5f}\n")
             print(f"Wrote top {top_n} to", top_csv)
 
             # positional consensus & entropy across top_n
@@ -258,7 +259,7 @@ def main():
                     mode='lines+markers',
                     name='Positional consensus',
                     hovertext=[
-                        f"pos={i}<br>nt={seq[i-1]}<br>cons={cons_scores_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
+                        f"pos={'0' + str(i) if i < 10 else i}<br>nt={seq[i-1]}<br>cons={cons_scores_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
                         for i in range(1, Lseq+1)
                     ],
                     hoverlabel = dict(
@@ -266,8 +267,8 @@ def main():
                             family="Courier New",
                             size=14)),
                     hoverinfo='text',
-                    line=dict(color='purple'),
-                    marker=dict(color='purple')
+                    line=dict(color='green'),
+                    marker=dict(color='green')
                 )
             )
             fig_cons.update_layout(
@@ -289,7 +290,7 @@ def main():
                     mode='lines+markers',
                     name='Positional entropy',
                     hovertext=[
-                        f"pos={i}<br>nt={seq[i-1]}<br>entropy={entp_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
+                        f"pos={'0' + str(i) if i < 10 else i}<br>nt={seq[i-1]}<br>entropy={entp_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
                         for i in range(1, Lseq+1)
                     ],
                     hoverlabel = dict(
@@ -297,8 +298,8 @@ def main():
                             family="Courier New",
                             size=14)),
                     hoverinfo='text',
-                    line=dict(color='orange'),
-                    marker=dict(color='orange')
+                    line=dict(color='brown'),
+                    marker=dict(color='brown')
                 )
             )
             fig_ent.update_layout(
