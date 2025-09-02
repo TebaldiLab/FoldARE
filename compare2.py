@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# solve the promlem with very long sequences
+
 """
 compare2.py
 
@@ -290,10 +290,15 @@ def main():
         from plotly.subplots import make_subplots
         import plotly.graph_objects as go
 
-        chunk_size = 50
-        nrows = ceil(seq_len / chunk_size)
+        nrows = 4
 
- # Positional entropy plot
+        chunk_size = ceil(seq_len / nrows)
+
+        # Each row's plot width scales with the chunk_size 
+        min_px_per_base = 10 
+        row_width_px = max(chunk_size * min_px_per_base, 800)
+
+        # ─── Positional entropy plot (adaptive rows, scrollable width) ───────────────
         fig_e = make_subplots(
             rows=nrows, cols=1,
             shared_xaxes=False,
@@ -302,64 +307,60 @@ def main():
                 for r in range(nrows)
             ]
         )
-        for r in range(nrows):
-            start = r * chunk_size
-            end   = min(start + chunk_size, seq_len)
-            xs    = list(range(start+1, end+1))
 
-            # Ensemble 1 entropy
+        for r in range(nrows):
+            start = r * chunk_size + 1
+            end   = min((r+1) * chunk_size, seq_len)
+            xs    = list(range(start + 1, end + 1))
+
             fig_e.add_trace(
                 go.Scatter(
-                    x=xs,
-                    y=pos_ent1[start:end],
+                    x=xs, y=pos_ent1[start:end],
                     mode='lines+markers',
-                    name=f"{letter_map[e1]} entropy",
-                    hovertext=[
-                        f"pos={'0' + str(i) if int(i) < 10 else str(i)}<br>nt={seq[i-1]}<br>H={pos_ent1[i-1]:.3f}"
-                        for i in xs
-                    ],
-                    hoverlabel = dict(
-                        font=dict(
-                            family="Courier New",
-                            size=14)),
+                    name=f"{letter_map[e1]} entropy, (row {r+1})",
                     line=dict(color=ENSEMBLE_COLORS[e1]),
-                    marker=dict(color=ENSEMBLE_COLORS[e1])
-                ),
-                row=r+1, col=1
-            )
-            # Ensemble 2 entropy
-            fig_e.add_trace(
-                go.Scatter(
-                    x=xs,
-                    y=pos_ent2[start:end],
-                    mode='lines+markers',
-                    name=f"{letter_map[e2]} entropy",
+                    marker=dict(color=ENSEMBLE_COLORS[e1]),
                     hovertext=[
-                        f"pos={'0' + str(i) if int(i) < 10 else str(i)}<br>nt={seq[i-1]}<br>H={pos_ent2[i-1]:.3f}"
+                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>H={pos_ent1[i-1]:.3f}"
                         for i in xs
                     ],
-                    hoverlabel = dict(
-                        font=dict(
-                            family="Courier New",
-                            size=14)),
-                    line=dict(color=ENSEMBLE_COLORS[e2]),
-                    marker=dict(color=ENSEMBLE_COLORS[e2])
                 ),
                 row=r+1, col=1
             )
-        fig_e.update_layout(font_family="Courier New")    
+
+            fig_e.add_trace(
+                go.Scatter(
+                    x=xs, y=pos_ent2[start:end],
+                    mode='lines+markers',
+                    name=f"{letter_map[e2]} entropy, (row {r+1})",
+                    line=dict(color=ENSEMBLE_COLORS[e2]),
+                    marker=dict(color=ENSEMBLE_COLORS[e2]),
+                    hovertext=[
+                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>H={pos_ent2[i-1]:.3f}"
+                        for i in xs
+                    ],
+                ),
+                row=r+1, col=1
+            )
+
+            fig_e.update_xaxes(range=[start - 0.5, end + 1], row=r + 1, col=1)
 
         fig_e.update_layout(
             title_text=(
                 f"Positional Shannon Entropy "
                 f"(global: {letter_map[e1]}={global_ent1:.3f}, {letter_map[e2]}={global_ent2:.3f})"
-            )
+            ),
+            font_family="Courier New",
+            width=max(row_width_px, 1000),   # this makes each row horizontally scrollable in the browser
+            height= max(700, 235 * nrows),  # scale height by number of rows
+            margin=dict(l=40, r=20, t=180, b=40),
+            legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
         )
+
         fig_e.write_html(f"{base}_compare2_positional_entropy.html", auto_open=False)
         print("Wrote positional entropy plot to", f"{base}_compare2_positional_entropy.html")
 
-
-        # Positional consensus plot
+        # ─── Positional consensus plot (adaptive rows, scrollable width) ─────────────
         fig_c = make_subplots(
             rows=nrows, cols=1,
             shared_xaxes=False,
@@ -368,48 +369,55 @@ def main():
                 for r in range(nrows)
             ]
         )
-        for r in range(nrows):
-            start = r * chunk_size
-            end   = min(start + chunk_size, seq_len)
-            xs    = list(range(start+1, end+1))
 
-            # Ensemble 1 consensus
+        for r in range(nrows):
+            start = r * chunk_size + 1
+            end   = min((r+1) * chunk_size, seq_len)
+            xs    = list(range(start + 1, end + 1))
+
             fig_c.add_trace(
                 go.Scatter(
-                    x=xs,
-                    y=pos_cons1[start:end],
+                    x=xs, y=pos_cons1[start:end],
                     mode='lines+markers',
-                    name=f"{letter_map[e1]} consensus",
-                    hovertext=[
-                        f"pos={'0' + str(i) if int(i) < 10 else str(i)}<br>nt={seq[i-1]}<br>cons={pos_cons1[i-1]:.3f}"
-                        for i in xs
-                    ],
+                    name=f"{letter_map[e1]} consensus, (row {r+1})",
                     line=dict(color=ENSEMBLE_COLORS[e1]),
-                    marker=dict(color=ENSEMBLE_COLORS[e1])
-                ),
-                row=r+1, col=1
-            )
-            # Ensemble 2 consensus
-            fig_c.add_trace(
-                go.Scatter(
-                    x=xs,
-                    y=pos_cons2[start:end],
-                    mode='lines+markers',
-                    name=f"{letter_map[e2]} consensus",
+                    marker=dict(color=ENSEMBLE_COLORS[e1]),
                     hovertext=[
-                        f"pos={'0' + str(i) if int(i) < 10 else str(i)}<br>nt={seq[i-1]}<br>cons={pos_cons2[i-1]:.3f}"
+                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>cons={pos_cons1[i-1]:.3f}"
                         for i in xs
                     ],
-                    line=dict(color=ENSEMBLE_COLORS[e2]),
-                    marker=dict(color=ENSEMBLE_COLORS[e2])
                 ),
                 row=r+1, col=1
             )
-        fig_c.update_layout(font_family="Courier New")
-        fig_c.update_layout(title_text="Structural Consensus Score")
+
+            fig_c.add_trace(
+                go.Scatter(
+                    x=xs, y=pos_cons2[start:end],
+                    mode='lines+markers',
+                    name=f"{letter_map[e2]} consensus, (row {r+1})",
+                    line=dict(color=ENSEMBLE_COLORS[e2]),
+                    marker=dict(color=ENSEMBLE_COLORS[e2]),
+                    hovertext=[
+                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>cons={pos_cons2[i-1]:.3f}"
+                        for i in xs
+                    ],
+                ),
+                row=r+1, col=1
+            )
+
+            fig_c.update_xaxes(range=[start - 0.5, end + 1], row=r + 1, col=1)
+
+        fig_c.update_layout(
+            title_text="Structural Consensus Score",
+            font_family="Courier New",
+            width=max(row_width_px, 1000),   # horizontally scrollable
+            height= max(700, 235 * nrows),
+            margin=dict(l=60, r=20, t=180, b=40),
+            legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
+        )
+
         fig_c.write_html(f"{base}_compare2_structural_consensus.html", auto_open=False)
         print("Wrote structural consensus plot to", f"{base}_compare2_structural_consensus.html")
-
 
         if top_n:
             # Sort all pairs by consensus score, descending

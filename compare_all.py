@@ -29,6 +29,8 @@ import math
 from collections import Counter
 import utils
 import plotly.graph_objects as go
+from math import ceil
+from plotly.subplots import make_subplots
 
 # ─── Letter‐to‐tool & colors ───────────────────────────────────────────────────
 LETTER_MAP = {
@@ -251,67 +253,107 @@ def main():
                 for sym in freq_all:
                     freq_all[sym].append(counts.get(sym, 0) / len(all_structs))
 
-            # build an interactive Plotly chart for consensus score
-            fig_cons = go.Figure(
-                go.Scatter(
-                    x=list(range(1, Lseq+1)),
-                    y=cons_scores_all,
-                    mode='lines+markers',
-                    name='Positional consensus',
-                    hovertext=[
-                        f"pos={'0' + str(i) if i < 10 else i}<br>nt={seq[i-1]}<br>cons={cons_scores_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
-                        for i in range(1, Lseq+1)
-                    ],
-                    hoverlabel = dict(
-                        font=dict(
-                            family="Courier New",
-                            size=14)),
-                    hoverinfo='text',
-                    line=dict(color='green'),
-                    marker=dict(color='green')
+            # Plotly chart for consensus score
+
+            nrows = 4
+            chunk_size = ceil(Lseq / nrows)
+            min_px_per_base = 9
+            row_width_px = max(chunk_size * min_px_per_base, 1000)
+
+            fig_cons = make_subplots(
+            rows=nrows, cols=1,
+            shared_xaxes=False,
+            subplot_titles=[
+                f"Positions {r*chunk_size+1}-{min((r+1)*chunk_size, Lseq)}"
+                for r in range(nrows)
+            ]
+        )
+
+            for r in range(nrows):
+                start = r * chunk_size
+                end   = min(start + chunk_size, Lseq)
+                xs    = list(range(start+1, end+1))
+
+                fig_cons.add_trace(
+                    go.Scatter(
+                        x=xs, y=cons_scores_all[start:end],
+                        mode='lines+markers',
+                        name=f'Consensus (row {r+1})',
+                        hovertext=[
+                            f"pos={'0' + str(i) if i < 10 else i}<br>nt={seq[i-1]}<br>cons={cons_scores_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
+                            for i in xs
+                        ],
+                        hoverlabel=dict(font=dict(family="Courier New", size=14)),
+                        line=dict(color='green'),
+                        marker=dict(color='green')
+                    ),
+                    row=r+1, col=1
                 )
-            )
+                fig_cons.update_xaxes(range=[start - 0.5, end + 0.5], row=r + 1, col=1)
+
             fig_cons.update_layout(
-                title=f"Positional Consensus Score",
+                title="Positional Consensus Score",
                 xaxis_title="Position",
                 yaxis_title="Consensus Score",
-                yaxis=dict(range=[-0.05, 1.05])
+                yaxis=dict(range=[-0.05, 1.05]),
+                font_family="Courier New",
+                height= max(700, 235 * nrows),
+                width=max(row_width_px, 1000),
+                margin=dict(l=50, r=20, t=140, b=50),
+                legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
             )
-            fig_cons.update_layout(font_family="Courier New")
             cons_html = f"{base}_compare_all_positional_consensus.html"
             fig_cons.write_html(cons_html, auto_open=False)
             print("Wrote positional consensus plot to", cons_html)
 
-            # build an interactive Plotly chart for positional entropy
-            fig_ent = go.Figure(
-                go.Scatter(
-                    x=list(range(1, Lseq+1)),
-                    y=entp_all,
-                    mode='lines+markers',
-                    name='Positional entropy',
-                    hovertext=[
-                        f"pos={'0' + str(i) if i < 10 else i}<br>nt={seq[i-1]}<br>entropy={entp_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
-                        for i in range(1, Lseq+1)
-                    ],
-                    hoverlabel = dict(
-                        font=dict(
-                            family="Courier New",
-                            size=14)),
-                    hoverinfo='text',
-                    line=dict(color='brown'),
-                    marker=dict(color='brown')
-                )
+
+            # Plotly chart for positional entropy
+            fig_ent = make_subplots(
+                rows=nrows, cols=1,
+                shared_xaxes=False,
+                subplot_titles=[
+                    f"Positions {r*chunk_size+1}-{min((r+1)*chunk_size, Lseq)}"
+                    for r in range(nrows)
+                ]
             )
+
+            for r in range(nrows):
+                start = r * chunk_size
+                end   = min(start + chunk_size, Lseq)
+                xs    = list(range(start+1, end+1))
+
+                fig_ent.add_trace(
+                    go.Scatter(
+                        x=xs, y=entp_all[start:end],
+                        mode='lines+markers',
+                        name=f'Entropy (row {r+1})',
+                        hovertext=[
+                            f"pos={'0' + str(i) if i < 10 else i}<br>nt={seq[i-1]}<br>H={entp_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
+                            for i in xs
+                        ],
+                        hoverlabel=dict(font=dict(family="Courier New", size=14)),
+                        line=dict(color='brown'),
+                        marker=dict(color='brown')
+                    ),
+                    row=r+1, col=1
+                )
+                fig_ent.update_xaxes(range=[start - 0.5, end + 0.5], row=r + 1, col=1)
+
             fig_ent.update_layout(
-                title=f"Positional Shannon Entropy",
+                title="Positional Shannon Entropy",
                 xaxis_title="Position",
                 yaxis_title="Entropy (shannon)",
-                yaxis=dict(range=[-0.05, max(entp_all) * 1.05])
+                yaxis=dict(range=[-0.05, max(entp_all)*1.05]),
+                font_family="Courier New",
+                height= max(700, 235 * nrows),
+                width=max(row_width_px, 1000),
+                margin=dict(l=50, r=20, t=140, b=50),
+                legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
             )
-            fig_ent.update_layout(font_family="Courier New")
             ent_html = f"{base}_compare_all_positional_entropy.html"
             fig_ent.write_html(ent_html, auto_open=False)
             print("Wrote positional entropy plot to", ent_html)
+
 
     finally:
         shutil.rmtree(tmpdir)
