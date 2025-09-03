@@ -214,11 +214,23 @@ def main():
         # if top_n, write top structures CSV
         if top_n:
             top_csv = f"{base}_compare_all_top{top_n}.csv"
+            # pairwise aggrate score within TOP-N
+            top_n_agg = {entry['id']: 0.0 for entry in ranked[:top_n]}
+            for i in range(top_n):
+                si = ranked[i]['struct']
+                idi= ranked[i]['id']
+                for j in range(top_n):
+                    if i == j: 
+                        continue
+                    sj = ranked[j]['struct']
+                    score = similarity_func(si, sj)
+                    top_n_agg[idi] += score
+
             with open(top_csv, 'w') as fh:
-                fh.write("id,method,index,structure,agg_score\n")
+                fh.write("id,method,index,structure,agg_score,top-n_agg_score\n")
                 for e in ranked[:top_n]:
                     fh.write(f"{e['id'][0] + '0' + e['id'][1:] if int(e['id'][1:]) < 10 else e['id']}, {e['letter']},{'0' + str(e['index']) if e['index'] < 10 else e['index']},"
-                         f"{e['struct']},{agg[e['id']]:.5f}\n")
+                         f"{e['struct']},{agg[e['id']]:.5f},{top_n_agg[e['id']]:.5f}\n")
             print(f"Wrote top {top_n} to", top_csv)
 
             # positional consensus & entropy across top_n
