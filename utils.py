@@ -351,7 +351,7 @@ def similarity_score_agnostic(structure1, structure2):
     return similarity
 
 
-def simple_similarity_score(struct1, struct2):
+def identity_score(struct1, struct2):
     """
     Compute a simple similarity score between two RNA structure strings.
     
@@ -386,6 +386,53 @@ def simple_similarity_score(struct1, struct2):
     
     score = match_count / len(struct1)
     return round(score, 5)
+
+
+def semi_identity_score(struct1, struct2):
+    """
+    Compute Score B ("semi-identity") between two RNA structures.
+    
+    For each position i:
+      - If the 3-nt window (i-1, i, i+1) is identical in both structures → +1
+      - Else, if only the i-th position is identical → +0.5
+      - Else → +0
+
+    Final score = sum / len(structure), in [0, 1].
+
+    :param struct1: First structure string (dot-bracket notation)
+    :param struct2: Second structure string (dot-bracket notation)
+    :return: Semi-identity score (float)
+    """
+    if len(struct1) != len(struct2):
+        raise ValueError("The two structures must have the same length.")
+
+    n = len(struct1)
+    score = 0.0
+
+    for i in range(n):
+        # define 3-nt window boundaries
+        left  = i - 1 if i > 0 else i
+        right = i + 1 if i < n - 1 else i
+
+        if struct1[left:right+1] == struct2[left:right+1]:
+            score += 1.0
+        elif struct1[i] == struct2[i]:
+            score += 0.5
+
+    return round(score / n, 5)
+
+
+def get_similarity_func(method: str):
+    """
+    Return the similarity scoring function by name.
+    method: "identity" for identity (Score A), "semi-identity" for semi-identity (Score B)
+    """
+    if method.lower() == "identity":
+        return identity_score
+    elif method.lower() == "semi-identity":
+        return semi_identity_score
+    else:
+        raise ValueError(f"Unknown scoring method: {method}")
 
 
 def shannon_math(data, unit):

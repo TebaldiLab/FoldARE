@@ -160,6 +160,9 @@ def main():
 
     seq = load_sequence(args.sequence)
 
+    scoring_method = cfg.get("scoring", {}).get("method", "identity")
+    similarity_func = utils.get_similarity_func(scoring_method)
+
     base = Path(args.sequence).stem
 
     M   = args.ens_n if args.ens_n is not None else cfg.get("global_ensemble_size", 20)
@@ -181,7 +184,7 @@ def main():
                 })
 
         N = len(all_structs)
-        # compute pairwise consensus scores
+        # compute pairwise structure similarity scores
         # initialize aggregate dict
         agg = { entry['id']: 0.0 for entry in all_structs }
         for i in range(N):
@@ -191,7 +194,7 @@ def main():
                 if i == j: 
                     continue
                 sj = all_structs[j]['struct']
-                score = utils.simple_similarity_score(si, sj)
+                score = similarity_func(si, sj)
                 agg[idi] += score
 
         # prepare ranking

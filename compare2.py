@@ -169,6 +169,10 @@ def main():
     if env.get("threads") is not None:
         os.environ["OMP_NUM_THREADS"] = str(env["threads"])
 
+    # ─── determine scoring method ───────────────────────────────────────────────
+    scoring_method = CFG.get("scoring", {}).get("method", "identity")
+    similarity_func = utils.get_similarity_func(scoring_method)
+
     # ─── determine ensemble‐size (ens_n) and best‐structures count (top_n) ─────────
     ens_n = args.ens_n if args.ens_n is not None else CFG.get("global_ensemble_size", 20)
     top_n = args.top_n  # may be None
@@ -196,11 +200,11 @@ def main():
         for i, s1 in enumerate(structs1):
             zrow, trow = [], []
             for j, s2 in enumerate(structs2):
-                score = utils.simple_similarity_score(s1, s2)
+                score = similarity_func(s1, s2)
                 zrow.append(score)
                 pair_scores.append((rows[i], cols[j], s1, s2, score))
                 hover = (
-                    f"consensus_score = {score:.3f}<br>"
+                    f"similarity_score ({scoring_method}) = {score:.3f}<br>"
                     f"seq = {seq[:70]}{'/' if len(seq)>70 else ''}<br>"
                     f"{rows[i][0] + '0' + rows[i][1:] if int(rows[i][1:]) < 10 else rows[i]} – {s1[:70]}{'/' if len(s1)>70 else ''}<br>"
                     f"{cols[j][0] + '0' + cols[j][1:] if int(cols[j][1:]) < 10 else cols[j]} – {s2[:70]}{'/' if len(s2)>70 else ''}"
@@ -212,7 +216,7 @@ def main():
         fig = go.Figure(data=go.Heatmap(
             z=z, x=cols, y=rows,
             hoverinfo="text", text=text,
-            colorbar=dict(title="Consensus"),
+            colorbar=dict(title="Similarity"),
             hoverlabel = dict(
             font=dict(
                 family="Courier New",
@@ -226,7 +230,7 @@ def main():
             textfont=dict(family="Courier New", size=12)
         ))
         fig.update_layout(
-            title=f"Consensus heatmap: {letter_map[e1]} vs {letter_map[e2]} (top {ens_n})",
+            title=f"Similarity heatmap: {letter_map[e1]} vs {letter_map[e2]} (top {ens_n})",
             xaxis_title=f"{e2} structures",
             yaxis_title=f"{e1} structures"
             # ensure square cells
@@ -429,7 +433,7 @@ def main():
             # Write to CSV
             best_file = base + "_compare2_best_pairs.csv"
             with open(best_file, 'w') as fh:
-                fh.write(f"{e1}_index,{e2}_index,{e1}_structure,{e2}_structure,consensus_score\n")
+                fh.write(f"{e1}_index,{e2}_index,{e1}_structure,{e2}_structure,similarity_score\n")
                 for i, j, s1, s2, score in best_pairs:
                     fh.write(f"{i[0] + '0' + i[1:] if int(i[1:]) < 10 else i},{j[0] + '0' + j[1:] if int(j[1:]) < 10 else j},{s1},{s2},{score:.3f}\n")
 

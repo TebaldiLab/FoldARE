@@ -1,5 +1,4 @@
 # config.yaml
-# add different scoring options
 # introduce V6 and R6 functions
 
 environment:   
@@ -7,6 +6,9 @@ environment:
   threads: 6  # Number of threads to use for parallel processing
 
 global_ensemble_size: 20 # Global ensemble size for all ensemble generation algorithms
+
+scoring:
+  method: "semi-identity" # Options: "identity" and "semi-identity"
 
 RNAStructure:
   # Path to the RNAstructure "fold" executable 
