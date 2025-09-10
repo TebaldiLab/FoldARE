@@ -14,7 +14,7 @@ RNAStructure:
   # Path to the RNAstructure "fold" executable 
   executable: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/exe/Fold-smp"
   params:
-    a: "m6A"
+    m6A: False # Whether to consider m6A modifications, default is False
     maxm: 20
 
 RNAFold:
@@ -23,12 +23,14 @@ RNAFold:
   params:
     max_bp_span: 0
     method: "mfe" # 'mfe' for default mode, 'p' for partition function mode 
+    m6A: False # Whether to consider m6A modifications, default is False
 
 RNASubopt:
   executable: "RNAsubopt"
   params:
     n_struc: 20 # Number of structures to generate, works only of probability-based mode
-    method: "p" # 'z' Zuker suboptionals mode (default), 'p' for probability-based mode
+    method: "z" # 'z' Zuker suboptionals mode (default), 'p' for probability-based mode
+    m6A: False # Whether to consider m6A modifications, default is False
 
 EternaFold:
   executable: "./../EternaFold-master/src/contrafold"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# make and aggregate score for TOP N structures
+
 """
 compare_all.py
 
@@ -87,12 +87,19 @@ def generate_ensemble(letter, seq, out_db, M, cfg):
 
     # call the appropriate wrapper
     if letter == 'V':
+        desired = M
         utils.RNASubopt(
             seq_file=seq, out_file=tmp_db,
             executable=exe,
             n_struc=M,
             method=params.get('method')
         )
+        full_list = utils.extract_ensemble(tmp_db)
+        if len(full_list) > desired:
+            trimmed = full_list[:desired]
+            with open(out_db, 'w') as fh:
+                fh.write("\n".join(trimmed) + "\n")
+            return trimmed
     elif letter == 'E':
         utils.EternaFold(
             seq_file=seq, out_file=tmp_db,
@@ -106,7 +113,6 @@ def generate_ensemble(letter, seq, out_db, M, cfg):
         utils.RNAStructure(
             seq_file=seq, out_file=tmp_db,
             executable=exe,
-            a=params.get('a'),
             maxm=params.get('maxm'),
         )
         # warn if fewer than M

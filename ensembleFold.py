@@ -13,6 +13,8 @@ Workflow:
     - V (ViennaRNA/RNASubopt): enumerate N suboptimal structures
     - R (RNAstructure): output the MFE structure (warns if N>1)
     - L (LinearFold): start with Δ=5.0, iteratively increment Δ by 1.0 until ≥N structures
+    - V6 (ViennaRNA with m6A): as V, but with m6A support
+    - R6 (RNAstructure with m6A): as R, but with m6
     • N is controlled by `--ens_n` or `global_ensemble_size` in config.yaml :contentReference[oaicite:0]{index=0}  
     • The raw ensemble is “cleaned” and trimmed to exactly N dot-bracket entries
 
@@ -24,6 +26,9 @@ Workflow:
     - V (RNAFold/ViennaRNA): predicts directly with SHAPE input
     - R (RNAstructure): predicts directly with SHAPE input
     - L (LinearFold): predicts directly with SHAPE input
+    - V6 (ViennaRNA with m6A): as V, but with m6A support
+    - R6 (RNAstructure with m6A): as R, but with m6A support
+    • Uses SHAPE file from previous step, or `--shape` if provided
 
 Outputs (in `<output_folder>`):
   • `<basename>_<ensemble>_ens.db`   — N dot-bracket structures  
@@ -52,9 +57,11 @@ from utils import (
 
 LETTER_MAP = {
     'E': "EternaFold",     # EternaFold
-    'V': "ViennaRNA",      # RNAsubopt from ViennaRNA
+    'V': "ViennaRNA",      # ViennaRNA
     'R': "RNAStructure",   # RNAstructure
     'L': "LinearFold",     # LinearFold
+    'V6': "ViennaRNA_m6A", # ViennaRNA with m6A
+    'R6': "RNAStructure_m6A", # RNAstructure with m6A
 }
 
 # -----------------------------------------------------------------------------
@@ -95,10 +102,10 @@ def clean_in_place(db_path: str):
 parser = argparse.ArgumentParser(description="Sequence-level RNA prediction pipeline (ensemble → SHAPE → predictor)")
 parser.add_argument("-p", "--predictor", required=True,
                     choices=list(LETTER_MAP.keys()) + list(LETTER_MAP.values()),
-                    help="Tool used for final prediction")
+                    help="Tool used for final prediction (E, V, R, L, R6, V6)")
 parser.add_argument( "-e", "--ensemble", required=True,
                     choices=list(LETTER_MAP.keys()) + list(LETTER_MAP.values()),
-                    help="Ensemble tool (full name or letter: E, V, R, L)")
+                    help="Ensemble tool (E, V, R, L, R6, V6)")
 parser.add_argument("-s", "--sequence", required=True, help="Input FASTA file")
 parser.add_argument("-o", "--output_folder", default=".")
 parser.add_argument("-c", "--config", default="config.yaml", help="YAML configuration file")
@@ -113,16 +120,30 @@ parser.add_argument("--ens_maxm", type=int)
 parser.add_argument("--ens_par", type=int)
 parser.add_argument("--ens_delta", type=float)
 args = parser.parse_args()
-if len(args.ensemble) == 1:
-    if LETTER_MAP[args.predictor] == "ViennaRNA":
+ens_m6a = False
+pred_m6a = False
+if len(args.ensemble) <= 2:
+    if LETTER_MAP[args.ensemble] == "ViennaRNA":
         # Special case for ViennaRNA, which uses RNASubopt
         args.ensemble = "RNASubopt"
+    elif LETTER_MAP[args.ensemble] == "ViennaRNA_m6A":
+        args.ensemble = "RNASubopt"
+        ens_m6a = True
+    elif LETTER_MAP[args.ensemble] == "RNAStructure_m6A":
+        args.ensemble = "RNAStructure"
+        ens_m6a = True
     else:
         args.ensemble = LETTER_MAP[args.ensemble]
-if len(args.predictor) == 1:
+if len(args.predictor) <= 2:
     if LETTER_MAP[args.predictor] == "ViennaRNA":
         # Special case for ViennaRNA, which uses RNASubopt
         args.predictor = "RNAFold"
+    elif LETTER_MAP[args.predictor] == "ViennaRNA_m6A":
+        args.predictor = "RNAFold"
+        pred_m6a = True
+    elif LETTER_MAP[args.predictor] == "RNAStructure_m6A":
+        args.predictor = "RNAStructure"
+        pred_m6a = True
     else:
         args.predictor = LETTER_MAP[args.predictor]
 
@@ -153,8 +174,12 @@ pred_exec = predictor_cfg.get("executable")
 ct2_exec = ct2_cfg.get("executable")
 
 # Parameter dictionaries -------------------------------------------------------
-ens_params_cfg = ensemble_cfg.get("params", {})
-pred_params_cfg = predictor_cfg.get("params", {})
+ens_params_cfg = ensemble_cfg.get("params", {}).copy()
+if ens_m6a and "m6A" in ens_params_cfg:
+    ens_params_cfg["m6A"] = True
+pred_params_cfg = predictor_cfg.get("params", {}).copy()
+if pred_m6a and "m6A" in pred_params_cfg:
+    pred_params_cfg["m6A"] = True
 ct2_params_cfg = ct2_cfg.get("params", {})
 
 # Merge CLI overrides ----------------------------------------------------------
@@ -177,14 +202,23 @@ if args.shape is None:
     etool = args.ensemble.lower()
 
     if etool == "rnasubopt":
+        desired = ensemble_target or nsamples or 1
+        tmp_db = ens_db + ".tmp"
         RNASubopt(**filter_kwargs(RNASubopt, {
             "seq_file": args.sequence,
-            "out_file": ens_db,
+            "out_file": tmp_db,
             "n_struc": nsamples,
             "method": ens_params_cfg.get("method"),
             "executable": ens_exec,
+            **ens_params_cfg,
         }))
-        clean_in_place(ens_db)
+        clean_in_place(tmp_db)
+        with open(tmp_db) as fh:
+            lines = fh.readlines()
+        if len(lines) > desired:
+            with open(tmp_db, "w") as fh:
+                fh.writelines(lines[:desired])
+        os.replace(tmp_db, ens_db)
 
     elif etool == "eternafold":
         EternaFold(**filter_kwargs(EternaFold, {
@@ -302,6 +336,7 @@ elif ptool == "rnafold":
         "max_bp_span": pred_params_cfg.get("max_bp_span"),
         "executable": pred_exec,
         "coinput_file": shape_file,
+        **pred_params_cfg,
     })
     RNAFold(**kw)
     print(pred_params_cfg.get("method", "z"))
