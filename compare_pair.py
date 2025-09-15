@@ -21,6 +21,7 @@ Usage example:
       -e1 E -e2 V \
       -n 20 \
       --top_n 5 \
+      -o res_folder \
       -c config.yaml \
 """
 import argparse
@@ -46,8 +47,8 @@ ENSEMBLE_COLORS = {
     'V': 'green',
     'R': 'red',
     'L': 'orange',
-    'V6': 'green',
-    'R6': 'red'
+    'V6': 'lightgreen',
+    'R6': 'lightcoral'
 }
 
 def load_config(path: str):
@@ -83,6 +84,7 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
     tool_cfg  = cfg[tool_name]
     exe        = tool_cfg['executable']
     params     = tool_cfg.get('params', {})
+    params['m6A'] = False
     if m6A:
         params['m6A'] = True
 
@@ -179,6 +181,7 @@ def main():
                 help="Number of structures to sample from each ensemble (defaults to global_ensemble_size)")
     p.add_argument("--top_n",           type=int,
                 help="Number of best structures (highest average consensus) to return in a separate file")
+    p.add_argument("-o", "--output_folder", default=".")
     p.add_argument("-c","--config",     default="config.yaml",
                 help="YAML configuration file")
     args = p.parse_args()
@@ -266,8 +269,8 @@ def main():
         )
         fig.update_layout(font_family="Courier New")
 
-        fig.write_html(f"{base}_compare2_heatmap.html", auto_open=False)
-        print("Wrote heatmap to", f"{base}_compare2_heatmap.html")
+        fig.write_html(os.path.join(args.output_folder, f"{base}_compare2_heatmap.html"), auto_open=False)
+        print("Wrote heatmap to", os.path.join(args.output_folder, f"{base}_compare2_heatmap.html"))
 
         # ─── Positional entropy & consensus ───────────────────────────────────────────
         # Compute global entropy for each ensemble
@@ -347,7 +350,7 @@ def main():
                     line=dict(color=ENSEMBLE_COLORS[e1]),
                     marker=dict(color=ENSEMBLE_COLORS[e1]),
                     hovertext=[
-                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>H={pos_ent1[i-1]:.3f}"
+                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>ent={pos_ent1[i-1]:.3f}"
                         for i in xs
                     ],
                 ),
@@ -362,7 +365,7 @@ def main():
                     line=dict(color=ENSEMBLE_COLORS[e2]),
                     marker=dict(color=ENSEMBLE_COLORS[e2]),
                     hovertext=[
-                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>H={pos_ent2[i-1]:.3f}"
+                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>ent={pos_ent2[i-1]:.3f}"
                         for i in xs
                     ],
                 ),
@@ -383,8 +386,8 @@ def main():
             legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
         )
 
-        fig_e.write_html(f"{base}_compare2_positional_entropy.html", auto_open=False)
-        print("Wrote positional entropy plot to", f"{base}_compare2_positional_entropy.html")
+        fig_e.write_html(os.path.join(args.output_folder, f"{base}_compare2_positional_entropy.html"), auto_open=False)
+        print("Wrote positional entropy plot to", os.path.join(args.output_folder, f"{base}_compare2_positional_entropy.html"))
 
         # ─── Positional consensus plot (adaptive rows, scrollable width) ─────────────
         fig_c = make_subplots(
@@ -442,8 +445,8 @@ def main():
             legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
         )
 
-        fig_c.write_html(f"{base}_compare2_structural_consensus.html", auto_open=False)
-        print("Wrote structural consensus plot to", f"{base}_compare2_structural_consensus.html")
+        fig_c.write_html(os.path.join(args.output_folder, f"{base}_compare2_structural_consensus.html"), auto_open=False)
+        print("Wrote structural consensus plot to", os.path.join(args.output_folder, f"{base}_compare2_structural_consensus.html"))
 
         if top_n:
             # Sort all pairs by consensus score, descending
@@ -453,7 +456,7 @@ def main():
             best_pairs = pair_scores[:min(top_n, len(pair_scores))]
             
             # Write to CSV
-            best_file = base + "_compare2_best_pairs.csv"
+            best_file = os.path.join(args.output_folder, f"{base}_compare2_best_pairs.csv")
             with open(best_file, 'w') as fh:
                 fh.write(f"{e1}_index,{e2}_index,{e1}_structure,{e2}_structure,similarity_score\n")
                 for i, j, s1, s2, score in best_pairs:

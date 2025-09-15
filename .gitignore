@@ -40,6 +40,7 @@ Thumbs.db
 ############################
 *.fasta
 *.db
+*.ct
 *.bpseq
 *.sub
 *.txt
@@ -53,6 +54,7 @@ __pycache__
 #####################
 *.ipynb
 
-# html charts#
+# charts and images#
 #####################
 *.html
+*.ps

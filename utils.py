@@ -28,18 +28,18 @@ def RNAFold(seq_file, out_file, max_bp_span=600, executable="RNAfold", method="m
     If coinput_file is provided, the command adds the '--shape <coinput_file>' option.
     """
     if coinput_file:
-        command = (f"{executable}{' -m6A' if m6A else ''}{' -p' if method == 'p' else ''} --noPS {'--noDP' if method == 'p' else ''} --maxBPspan={max_bp_span} "
+        command = (f"{executable}{' -m6' if m6A else ''}{' -p' if method == 'p' else ''} --noPS {'--noDP' if method == 'p' else ''} --maxBPspan={max_bp_span} "
                    f"--shape {coinput_file} {seq_file} > {out_file}")
     else:
-        command = f"{executable}{' -m6A' if m6A else ''}{' -p' if method == 'p' else ''} --noPS {'--noDP' if method == 'p' else ''} --maxBPspan={max_bp_span} {seq_file} > {out_file}"
+        command = f"{executable}{' -m6' if m6A else ''}{' -p' if method == 'p' else ''} --noPS {'--noDP' if method == 'p' else ''} --maxBPspan={max_bp_span} {seq_file} > {out_file}"
     print("Running RNAfold command:", command)
     os.system(command)
 
 def RNASubopt(seq_file, out_file, n_struc=20, method='z', m6A=False, executable="RNAsubopt", coinput_file=None):
     if coinput_file:
-        command = (f"{executable}{' -m6A' if m6A else ''}{' -p' if method == 'p' else ' -z'} {n_struc if method == 'p' else ''} -s < {seq_file} > {out_file} 2>/dev/null")
+        command = (f"{executable}{' -m6' if m6A else ''}{' -p' if method == 'p' else ' -z'} {n_struc if method == 'p' else ''} -s < {seq_file} > {out_file} 2>/dev/null")
     else:
-        command = f"{executable}{' -m6A' if m6A else ''}{' -p' if method == 'p' else ' -z'} {n_struc if method == 'p' else ''} -s < {seq_file} > {out_file} 2>/dev/null"
+        command = f"{executable}{' -m6' if m6A else ''}{' -p' if method == 'p' else ' -z'} {n_struc if method == 'p' else ''} -s < {seq_file} > {out_file} 2>/dev/null"
     print("Running RNAsubopt command:", command)
     os.system(command)
 

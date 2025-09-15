@@ -199,6 +199,8 @@ base_name = os.path.splitext(os.path.basename(args.sequence))[0]
 # -----------------------------------------------------------------------------
 if args.shape is None:
     ens_db = os.path.join(args.output_folder, f"{base_name}_{args.ensemble}_ens.db")
+    if ens_m6a:
+        ens_db = ens_db.replace(".db", "_m6A.db")
     etool = args.ensemble.lower()
 
     if etool == "rnasubopt":
@@ -293,8 +295,14 @@ else:
 ptool = args.predictor.lower()
 if args.shape is None:
     pred_out = os.path.join(args.output_folder, f"{base_name}_{etool}_{ptool}_final.db")
+    if ens_m6a:
+        pred_out = os.path.join(args.output_folder, f"{base_name}_{etool}_m6A_{ptool}_final.db")
+    if pred_m6a:
+        pred_out = os.path.join(args.output_folder, f"{base_name}_{etool}_m6A_{ptool}_m6A_final.db")
 else:
     pred_out = os.path.join(args.output_folder, f"{base_name}_customShape_{ptool}_final.db")
+    if pred_m6a:
+        pred_out = os.path.join(args.output_folder, f"{base_name}_customShape_{ptool}_m6A_final.db")
 
 if ptool == "eternafold":
     bpseq = os.path.join(args.output_folder, f"{base_name}_shape.bpseq")
@@ -325,6 +333,7 @@ elif ptool == "rnastructure":
         "coinput_file": shape_file,
         "executable": pred_exec,
         **pred_params_cfg,
+        "maxm": 1
     })
     RNAStructure(**kw)
 

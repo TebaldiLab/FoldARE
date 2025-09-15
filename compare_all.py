@@ -17,6 +17,7 @@ aggregate each structure’s total score, rank them, and report:
       -s myseq.fasta \
       -n 20 \
       --top_n 5 \
+      -o res_folder \
       -c config.yaml \
 """
 import argparse
@@ -152,6 +153,7 @@ def main():
                    help="Number of structures per ensemble (default from config)")
     p.add_argument("--top_n", type=int,
                    help="Number of top structures to output and analyze")
+    p.add_argument("-o", "--output_folder", default=".")
     p.add_argument("-c","--config", default="config.yaml",
                    help="YAML configuration file")
     args = p.parse_args()
@@ -209,7 +211,7 @@ def main():
                         reverse=True)
 
         # write full ranking CSV
-        full_csv = f"{base}_compare_all_ranked.csv"
+        full_csv = os.path.join(args.output_folder, f"{base}_compare_all_ranked.csv")
         with open(full_csv, 'w') as fh:
             fh.write("id,method,index,structure,agg_score\n")
             for e in ranked:
@@ -219,7 +221,7 @@ def main():
 
         # if top_n, write top structures CSV
         if top_n:
-            top_csv = f"{base}_compare_all_top{top_n}.csv"
+            top_csv = os.path.join(args.output_folder, f"{base}_compare_all_top{top_n}.csv")
             # pairwise aggrate score within TOP-N
             top_n_agg = {entry['id']: 0.0 for entry in ranked[:top_n]}
             for i in range(top_n):
@@ -323,7 +325,7 @@ def main():
                 margin=dict(l=50, r=20, t=140, b=50),
                 legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
             )
-            cons_html = f"{base}_compare_all_positional_consensus.html"
+            cons_html = os.path.join(args.output_folder, f"{base}_compare_all_positional_consensus.html")
             fig_cons.write_html(cons_html, auto_open=False)
             print("Wrote positional consensus plot to", cons_html)
 
@@ -371,7 +373,7 @@ def main():
                 margin=dict(l=50, r=20, t=140, b=50),
                 legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
             )
-            ent_html = f"{base}_compare_all_positional_entropy.html"
+            ent_html = os.path.join(args.output_folder, f"{base}_compare_all_positional_entropy.html")
             fig_ent.write_html(ent_html, auto_open=False)
             print("Wrote positional entropy plot to", ent_html)
 
