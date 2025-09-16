@@ -42,10 +42,10 @@ LETTER_MAP = {
 }
 
 ENSEMBLE_COLORS = {
-    'E': 'blue',
-    'V': 'green',
-    'R': 'red',
-    'L': 'orange',
+    'E': 'brown',
+    'V': 'red',
+    'R': 'purple',
+    'L': 'green',
 }
 
 # ─── Shannon entropy helper ────────────────────────────────────────────────────

@@ -49,6 +49,7 @@ Thumbs.db
 # Generated files by the pipeline #
 ###################################
 __pycache__
+*.db.tmp
 
 # Jupyter Notebooks #
 #####################

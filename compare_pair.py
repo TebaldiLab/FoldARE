@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-compare2.py
+compare_pair.py
 
 Generate N structures from two chosen ensemble tools (EternaFold, RNAsubopt,
 RNAstructure, or LinearFold), then compute and visualize how they agree:
@@ -16,7 +16,7 @@ RNAstructure, or LinearFold), then compute and visualize how they agree:
     write them to a CSV.
 
 Usage example:
-    python compare2.py \
+    python compare_pair.py \
       -s myseq.fasta \
       -e1 E -e2 V \
       -n 20 \
@@ -43,12 +43,12 @@ letter_map = {'E': 'EternaFold',
                 'R6': 'RNAStructure_m6A'}
 
 ENSEMBLE_COLORS = {
-    'E': 'blue',
-    'V': 'green',
-    'R': 'red',
-    'L': 'orange',
-    'V6': 'lightgreen',
-    'R6': 'lightcoral'
+    'E': 'brown',
+    'V': 'red',
+    'R': 'purple',
+    'L': 'green',
+    'V6': 'lightcoral',
+    'R6': 'violet'
 }
 
 def load_config(path: str):
@@ -269,8 +269,8 @@ def main():
         )
         fig.update_layout(font_family="Courier New")
 
-        fig.write_html(os.path.join(args.output_folder, f"{base}_compare2_heatmap.html"), auto_open=False)
-        print("Wrote heatmap to", os.path.join(args.output_folder, f"{base}_compare2_heatmap.html"))
+        fig.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_heatmap.html"), auto_open=False)
+        print("Wrote heatmap to", os.path.join(args.output_folder, f"{base}_compare_pair_heatmap.html"))
 
         # ─── Positional entropy & consensus ───────────────────────────────────────────
         # Compute global entropy for each ensemble
@@ -386,8 +386,8 @@ def main():
             legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
         )
 
-        fig_e.write_html(os.path.join(args.output_folder, f"{base}_compare2_positional_entropy.html"), auto_open=False)
-        print("Wrote positional entropy plot to", os.path.join(args.output_folder, f"{base}_compare2_positional_entropy.html"))
+        fig_e.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_positional_entropy.html"), auto_open=False)
+        print("Wrote positional entropy plot to", os.path.join(args.output_folder, f"{base}_compare_pair_positional_entropy.html"))
 
         # ─── Positional consensus plot (adaptive rows, scrollable width) ─────────────
         fig_c = make_subplots(
@@ -445,8 +445,8 @@ def main():
             legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
         )
 
-        fig_c.write_html(os.path.join(args.output_folder, f"{base}_compare2_structural_consensus.html"), auto_open=False)
-        print("Wrote structural consensus plot to", os.path.join(args.output_folder, f"{base}_compare2_structural_consensus.html"))
+        fig_c.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_structural_consensus.html"), auto_open=False)
+        print("Wrote structural consensus plot to", os.path.join(args.output_folder, f"{base}_compare_pair_structural_consensus.html"))
 
         if top_n:
             # Sort all pairs by consensus score, descending
@@ -456,7 +456,7 @@ def main():
             best_pairs = pair_scores[:min(top_n, len(pair_scores))]
             
             # Write to CSV
-            best_file = os.path.join(args.output_folder, f"{base}_compare2_best_pairs.csv")
+            best_file = os.path.join(args.output_folder, f"{base}_compare_pair_best_pairs.csv")
             with open(best_file, 'w') as fh:
                 fh.write(f"{e1}_index,{e2}_index,{e1}_structure,{e2}_structure,similarity_score\n")
                 for i, j, s1, s2, score in best_pairs:
