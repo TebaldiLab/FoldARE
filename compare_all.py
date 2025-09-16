@@ -313,6 +313,7 @@ def main():
                 row=r+1, col=1
             )
             fig_cons.update_xaxes(range=[start - 0.5, end + 0.5], row=r + 1, col=1)
+            fig_cons.update_yaxes(range=[0, 1.05], row=r + 1, col=1)
 
         fig_cons.update_layout(
             title="Positional Consensus Score",
@@ -361,6 +362,7 @@ def main():
                 row=r+1, col=1
             )
             fig_ent.update_xaxes(range=[start - 0.5, end + 0.5], row=r + 1, col=1)
+            fig_ent.update_yaxes(range=[0, max(max(entp_all[start:end])) * 1.05], row=r + 1, col=1)
 
         fig_ent.update_layout(
             title="Positional Shannon Entropy",

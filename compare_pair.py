@@ -341,7 +341,7 @@ def main():
             start = r * chunk_size + 1
             end   = min((r+1) * chunk_size, seq_len)
             xs    = list(range(start + 1, end + 1))
-
+            
             fig_e.add_trace(
                 go.Scatter(
                     x=xs, y=pos_ent1[start:end],
@@ -373,6 +373,7 @@ def main():
             )
 
             fig_e.update_xaxes(range=[start - 0.5, end + 1], row=r + 1, col=1)
+            fig_e.update_yaxes(range=[0, max(max(pos_ent1[start:end]), max(pos_ent2[start:end]), 1) * 1.05], row=r + 1, col=1)
 
         fig_e.update_layout(
             title_text=(
@@ -435,6 +436,7 @@ def main():
             )
 
             fig_c.update_xaxes(range=[start - 0.5, end + 1], row=r + 1, col=1)
+            fig_c.update_yaxes(range=[0, 1.05], row=r + 1, col=1)
 
         fig_c.update_layout(
             title_text="Structural Consensus Score",
