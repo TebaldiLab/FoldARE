@@ -48,6 +48,7 @@ Usage example:
 import os
 import argparse
 from inspect import signature
+from pathlib import Path
 from ruamel.yaml import YAML
 from utils import (
     RNAStructure, RNAFold, RNASubopt,
@@ -120,6 +121,9 @@ parser.add_argument("--ens_maxm", type=int)
 parser.add_argument("--ens_par", type=int)
 parser.add_argument("--ens_delta", type=float)
 args = parser.parse_args()
+
+Path(args.output_folder).mkdir(parents=True, exist_ok=True)
+
 ens_m6a = False
 pred_m6a = False
 if len(args.ensemble) <= 2:

@@ -186,6 +186,9 @@ def main():
                 help="YAML configuration file")
     args = p.parse_args()
 
+    # ensure output folder exists (minimal change)
+    Path(args.output_folder).mkdir(parents=True, exist_ok=True)
+
     # ─── load config & env ─────────────────────────────────────────────────────
     CFG = load_config(args.config)
     env = CFG.get("environment", {})
@@ -295,12 +298,15 @@ def main():
             f"{letter_map[e2]} = {global_ent2:.3f}"
         )
 
-        # Compute per-position entropy and consensus
+        # Compute per-position entropy, consensus, and per-symbol frequencies
         seq_len = len(seq)
         pos_ent1 = []
         pos_ent2 = []
         pos_cons1 = []
         pos_cons2 = []
+        
+        freq1 = {".": [], "(": [], ")": []}
+        freq2 = {".": [], "(": [], ")": []}
 
         for i in range(seq_len):
             col1 = [s[i] for s in structs1]
@@ -313,6 +319,10 @@ def main():
             c2 = Counter(col2)
             pos_cons1.append(max(c1.values()) / len(col1))
             pos_cons2.append(max(c2.values()) / len(col2))
+            
+            for sym in (".","(",")"):
+                freq1[sym].append(c1.get(sym, 0) / len(col1))
+                freq2[sym].append(c2.get(sym, 0) / len(col2))
 
         # Split long sequences into chunks of ~50 positions per row
         from math import ceil
@@ -320,9 +330,7 @@ def main():
         import plotly.graph_objects as go
 
         nrows = 4
-
         chunk_size = ceil(seq_len / nrows)
-
         # Each row's plot width scales with the chunk_size 
         min_px_per_base = 10 
         row_width_px = max(chunk_size * min_px_per_base, 800)
@@ -350,7 +358,12 @@ def main():
                     line=dict(color=ENSEMBLE_COLORS[e1]),
                     marker=dict(color=ENSEMBLE_COLORS[e1]),
                     hovertext=[
-                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>ent={pos_ent1[i-1]:.3f}"
+                        (
+                            f"pos={'0' + str(i) if i < 10 else str(i)}"
+                            f"<br>nt={seq[i-1]}"
+                            f"<br>ent={pos_ent1[i-1]:.3f}"
+                            f"<br>(={freq1['('][i-1]:.3f} )={freq1[')'][i-1]:.3f} .={freq1['.'][i-1]:.3f}"
+                        )
                         for i in xs
                     ],
                 ),
@@ -365,7 +378,12 @@ def main():
                     line=dict(color=ENSEMBLE_COLORS[e2]),
                     marker=dict(color=ENSEMBLE_COLORS[e2]),
                     hovertext=[
-                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>ent={pos_ent2[i-1]:.3f}"
+                        (
+                            f"pos={'0' + str(i) if i < 10 else str(i)}"
+                            f"<br>nt={seq[i-1]}"
+                            f"<br>ent={pos_ent2[i-1]:.3f}"
+                            f"<br>(={freq2['('][i-1]:.3f} )={freq2[')'][i-1]:.3f} .={freq2['.'][i-1]:.3f}"
+                        )
                         for i in xs
                     ],
                 ),
@@ -413,7 +431,12 @@ def main():
                     line=dict(color=ENSEMBLE_COLORS[e1]),
                     marker=dict(color=ENSEMBLE_COLORS[e1]),
                     hovertext=[
-                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>cons={pos_cons1[i-1]:.3f}"
+                        (
+                            f"pos={'0' + str(i) if i < 10 else str(i)}"
+                            f"<br>nt={seq[i-1]}"
+                            f"<br>cons={pos_cons1[i-1]:.3f}"
+                            f"<br>(={freq1['('][i-1]:.3f} )={freq1[')'][i-1]:.3f} .={freq1['.'][i-1]:.3f}"
+                        )
                         for i in xs
                     ],
                 ),
@@ -428,7 +451,12 @@ def main():
                     line=dict(color=ENSEMBLE_COLORS[e2]),
                     marker=dict(color=ENSEMBLE_COLORS[e2]),
                     hovertext=[
-                        f"pos={'0' + str(i) if i < 10 else str(i)}<br>nt={seq[i-1]}<br>cons={pos_cons2[i-1]:.3f}"
+                        (
+                            f"pos={'0' + str(i) if i < 10 else str(i)}"
+                            f"<br>nt={seq[i-1]}"
+                            f"<br>cons={pos_cons2[i-1]:.3f}"
+                            f"<br>(={freq2['('][i-1]:.3f} )={freq2[')'][i-1]:.3f} .={freq2['.'][i-1]:.3f}"
+                        )
                         for i in xs
                     ],
                 ),
@@ -474,4 +502,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

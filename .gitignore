@@ -39,6 +39,8 @@ Thumbs.db
 # Sequence/Strucutre files #
 ############################
 *.fasta
+*.REF
+*.dp.REF
 *.db
 *.ct
 *.bpseq
@@ -59,3 +61,7 @@ __pycache__
 #####################
 *.html
 *.ps
+
+# temporary scripts #
+#####################
+benchmark*.py

@@ -158,6 +158,9 @@ def main():
                    help="YAML configuration file")
     args = p.parse_args()
 
+   
+    Path(args.output_folder).mkdir(parents=True, exist_ok=True)
+
     # load config & env
     cfg = load_config(args.config)
     env = cfg.get("environment", {})
@@ -245,7 +248,8 @@ def main():
         top_structs = [e['struct'] for e in ranked[:top_n]]
         all_structs = [e['struct'] for e in ranked]
         Lseq = len(seq)
-        # consensus freq per position
+
+        # (top_n) consensus/entropy (unchanged – not used in plots below)
         cons_scores = []
         entp = []
         freq = {".": [], "(": [], ")": []}
@@ -253,44 +257,39 @@ def main():
             col = [s[i] for s in top_structs]
             counts = Counter(col)
             most, cnt = counts.most_common(1)[0]
-            # consensus score = fraction of structures agreeing on the most common symbol
             cons_scores.append(cnt / len(top_structs))
-            # entropy as before
             entp.append(shannon_math(col, unit="shannon"))
-            # frequency of all symbols
             for sym in freq:
                 freq[sym].append(counts.get(sym, 0) / len(top_structs))
 
+        # (all) consensus/entropy
         entp_all = []
         cons_scores_all = []
         freq_all = {".": [], "(": [], ")": []}
+
         for i in range(Lseq):
             col = [s[i] for s in all_structs]
             counts = Counter(col)
             most, cnt = counts.most_common(1)[0]
-            # consensus score = fraction of structures agreeing on the most common symbol
             cons_scores_all.append(cnt / len(all_structs))
-            # entropy as before
             entp_all.append(shannon_math(col, unit="shannon"))
-            # frequency of all symbols
             for sym in freq_all:
                 freq_all[sym].append(counts.get(sym, 0) / len(all_structs))
 
         # Plotly chart for consensus score
-
         nrows = 4
         chunk_size = ceil(Lseq / nrows)
         min_px_per_base = 9
         row_width_px = max(chunk_size * min_px_per_base, 1000)
 
         fig_cons = make_subplots(
-        rows=nrows, cols=1,
-        shared_xaxes=False,
-        subplot_titles=[
-            f"Positions {r*chunk_size+1}-{min((r+1)*chunk_size, Lseq)}"
-            for r in range(nrows)
-        ]
-    )
+            rows=nrows, cols=1,
+            shared_xaxes=False,
+            subplot_titles=[
+                f"Positions {r*chunk_size+1}-{min((r+1)*chunk_size, Lseq)}"
+                for r in range(nrows)
+            ]
+        )
 
         for r in range(nrows):
             start = r * chunk_size
@@ -303,7 +302,12 @@ def main():
                     mode='lines+markers',
                     name=f'Consensus (row {r+1})',
                     hovertext=[
-                        f"pos={'0' + str(i) if i < 10 else i}<br>nt={seq[i-1]}<br>cons={cons_scores_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
+                        (
+                            f"pos={'0' + str(i) if i < 10 else i}"
+                            f"<br>nt={seq[i-1]}"
+                            f"<br>cons={cons_scores_all[i-1]:.3f}"
+                            f"<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
+                        )
                         for i in xs
                     ],
                     hoverlabel=dict(font=dict(family="Courier New", size=14)),
@@ -330,7 +334,6 @@ def main():
         fig_cons.write_html(cons_html, auto_open=False)
         print("Wrote positional consensus plot to", cons_html)
 
-
         # Plotly chart for positional entropy
         fig_ent = make_subplots(
             rows=nrows, cols=1,
@@ -352,7 +355,12 @@ def main():
                     mode='lines+markers',
                     name=f'Entropy (row {r+1})',
                     hovertext=[
-                        f"pos={'0' + str(i) if i < 10 else i}<br>nt={seq[i-1]}<br>H={entp_all[i-1]:.3f}<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
+                        (
+                            f"pos={'0' + str(i) if i < 10 else i}"
+                            f"<br>nt={seq[i-1]}"
+                            f"<br>H={entp_all[i-1]:.3f}"
+                            f"<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
+                        )
                         for i in xs
                     ],
                     hoverlabel=dict(font=dict(family="Courier New", size=14)),
@@ -362,7 +370,6 @@ def main():
                 row=r+1, col=1
             )
             fig_ent.update_xaxes(range=[start - 0.5, end + 0.5], row=r + 1, col=1)
-            fig_ent.update_yaxes(range=[0, max(max(entp_all[start:end])) * 1.05], row=r + 1, col=1)
 
         fig_ent.update_layout(
             title="Positional Shannon Entropy",
@@ -379,10 +386,8 @@ def main():
         fig_ent.write_html(ent_html, auto_open=False)
         print("Wrote positional entropy plot to", ent_html)
 
-
     finally:
         shutil.rmtree(tmpdir)
-
 
 if __name__ == "__main__":
     main()
