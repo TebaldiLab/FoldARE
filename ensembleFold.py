@@ -187,9 +187,9 @@ if pred_m6a and "m6A" in pred_params_cfg:
 ct2_params_cfg = ct2_cfg.get("params", {})
 
 # Merge CLI overrides ----------------------------------------------------------
-nsamples = select(ens_params_cfg, args.ens_nsamples, "n_struc") or ensemble_target
-maxm     = select(ens_params_cfg, args.ens_maxm, "maxm")
-par      = select(ens_params_cfg, args.ens_par, "par")
+nsamples = ensemble_target or select(ens_params_cfg, args.ens_nsamples, "n_struc")
+maxm     = ensemble_target or select(ens_params_cfg, args.ens_maxm, "maxm")
+par      = select(ens_params_cfg, args.ens_par, "par") 
 delta    = select(ens_params_cfg, args.ens_delta, "delta") or ens_params_cfg.get("delta", 5.0)
 
 # -----------------------------------------------------------------------------
@@ -266,6 +266,7 @@ if args.shape is None:
             "seq_file": args.sequence,
             "out_file": ens_db,
             "executable": ens_exec,
+            "maxm": maxm,
             **ens_params_cfg,
         }))
         clean_in_place(ens_db)

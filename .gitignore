@@ -46,6 +46,8 @@ Thumbs.db
 *.bpseq
 *.sub
 *.txt
+*.out
+*.fa
 *.csv
 
 # Generated files by the pipeline #

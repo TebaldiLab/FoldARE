@@ -5,17 +5,17 @@ environment:
   data_tables: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/data_tables/"  # Path to data tables
   threads: 6  # Number of threads to use for parallel processing
 
-global_ensemble_size: 20 # Global ensemble size for all ensemble generation algorithms
+global_ensemble_size: 75 # Global ensemble size for all ensemble generation algorithms
 
 scoring:
-  method: "semi-identity" # Options: "identity" and "semi-identity"
+  method: "identity" # Options: "identity" and "semi-identity"
 
 RNAStructure:
   # Path to the RNAstructure "fold" executable 
   executable: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/exe/Fold-smp"
   params:
     m6A: False # Whether to consider m6A modifications, default is False
-    maxm: 20
+    maxm: 75 
 
 RNAFold:
   # For RNAFold, we assume the command is available in PATH.
@@ -28,7 +28,7 @@ RNAFold:
 RNASubopt:
   executable: "RNAsubopt"
   params:
-    n_struc: 20 # Number of structures to generate, works only of probability-based mode
+    n_struc: 75  # Number of structures to generate, works only of probability-based mode
     method: "z" # 'z' Zuker suboptionals mode (default), 'p' for probability-based mode
     m6A: False # Whether to consider m6A modifications, default is False
 
@@ -37,7 +37,7 @@ EternaFold:
   params:
     eternaFold_params: "../EternaFold-master/parameters/EternaFoldParams.v1"
     eternaFold_params_shape: "../EternaFold-master/parameters/EternaFoldParams_PLUS_POTENTIALS.v1"
-    nsamples: 20
+    nsamples: 75
 
 LinearFold:
   executable: "./../LinearFold-master/linearfold"
