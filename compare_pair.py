@@ -21,7 +21,7 @@ Usage example:
       -e1 E -e2 V \
       -n 20 \
       --top_n 5 \
-      -o res_folder \
+      -o compare_pair_results \
       -c config.yaml \
 """
 import argparse
@@ -29,7 +29,7 @@ import tempfile
 import os
 import shutil
 from pathlib import Path
-
+from datetime import datetime
 from collections import Counter
 
 from ruamel.yaml import YAML
@@ -167,6 +167,51 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
         fh.write("\n".join(trimmed) + "\n")
     return trimmed
 
+from datetime import datetime
+from pathlib import Path
+
+def write_output_summary_compare_pair(
+    out_dir: Path,
+    base: str,
+    seq_label: str,
+    e1: str,
+    e2: str,
+    ens_n: int,
+    top_n: int | None,
+    scoring_method: str
+):
+    """
+    Create <base>_compare_pair_summary.txt describing outputs of compare_pair.py.
+    """
+    p = out_dir / f"{base}_compare_pair_summary.txt"
+    lines = []
+    lines.append("compare_pair.py – Output Summary\n")
+    lines.append("="*56 + "\n\n")
+    lines.append(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+    lines.append(f"Sequence: {seq_label}\n")
+    lines.append(f"Ensembler 1: {e1}\n")
+    lines.append(f"Ensembler 2: {e2}\n")
+    lines.append(f"Ensemble size per method (N): {ens_n}\n")
+    lines.append(f"Scoring method: {scoring_method}\n")
+    if top_n:
+        lines.append(f"Top-N pairs reported: {top_n}\n")
+    lines.append(f"Output folder: {out_dir.resolve()}\n\n")
+
+    lines.append("[Generated files]\n")
+    lines.append(f"  - {base}_compare_pair_heatmap.html               : N×N similarity heatmap (interactive)\n")
+    lines.append(f"  - {base}_compare_pair_positional_entropy.html   : per-position Shannon entropy, both methods overlaid (interactive)\n")
+    lines.append(f"  - {base}_compare_pair_structural_consensus.html : per-position consensus, both methods overlaid (interactive)\n")
+    if top_n:
+        lines.append(f"  - {base}_compare_pair_best_pairs.csv            : top-N structure pairs by similarity\n")
+    lines.append("\nNotes:\n")
+    lines.append("  • Heatmap hover shows pairwise similarity and truncated structures.\n")
+    lines.append("  • Entropy/consensus plots are chunked over rows for long sequences; hover for nt and per-symbol fractions.\n")
+
+    with open(p, "w") as fh:
+        fh.writelines(lines)
+    print(f"Summary file written: {p}")
+
+
 def main():
     p = argparse.ArgumentParser(
         description="Consensus heatmap between two ensemble methods"
@@ -181,7 +226,8 @@ def main():
                 help="Number of structures to sample from each ensemble (defaults to global_ensemble_size)")
     p.add_argument("--top_n",           type=int,
                 help="Number of best structures (highest average consensus) to return in a separate file")
-    p.add_argument("-o", "--output_folder", default=".")
+    p.add_argument("-o", "--output_folder", default="compare_pair_results",
+                help="Output folder")
     p.add_argument("-c","--config",     default="config.yaml",
                 help="YAML configuration file")
     args = p.parse_args()
@@ -494,6 +540,16 @@ def main():
 
             print(f"Wrote top {len(best_pairs)} best structure pairs to {best_file}")
 
+        # --- write summary file
+        write_output_summary_compare_pair(
+            out_dir=Path(args.output_folder),
+            base=base,
+            seq_label=args.sequence,
+            e1=e1, e2=e2,
+            ens_n=ens_n,
+            top_n=top_n,
+            scoring_method=scoring_method
+        )
 
     finally:
         shutil.rmtree(tmpdir)

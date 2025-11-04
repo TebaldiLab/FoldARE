@@ -17,7 +17,7 @@ aggregate each structure’s total score, rank them, and report:
       -s myseq.fasta \
       -n 20 \
       --top_n 5 \
-      -o res_folder \
+      -o compare_all_results \
       -c config.yaml \
 """
 import argparse
@@ -31,6 +31,7 @@ from collections import Counter
 import utils
 import plotly.graph_objects as go
 from math import ceil
+from datetime import datetime
 from plotly.subplots import make_subplots
 
 # ─── Letter‐to‐tool & colors ───────────────────────────────────────────────────
@@ -144,6 +145,43 @@ def generate_ensemble(letter, seq, out_db, M, cfg):
         fh.write("\n".join(trimmed) + "\n")
     return trimmed
 
+def write_output_summary_compare_all(
+    out_dir: Path,
+    base: str,
+    seq_label: str,
+    M: int,
+    top_n: int | None,
+    scoring_method: str
+):
+    """
+    Create <base>_compare_all_summary.txt describing outputs of compare_all.py.
+    """
+    p = out_dir / f"{base}_compare_all_summary.txt"
+    lines = []
+    lines.append("compare_all.py – Output Summary\n")
+    lines.append("="*56 + "\n\n")
+    lines.append(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    lines.append(f"Sequence:  {seq_label}\n")
+    lines.append(f"Ensemble size per tool (M): {M}\n")
+    lines.append(f"Scoring method: {scoring_method}\n")
+    if top_n:
+        lines.append(f"Top-N reported: {top_n}\n")
+    lines.append(f"Output folder: {out_dir.resolve()}\n\n")
+
+    lines.append("[Generated files]\n")
+    lines.append(f"  - {base}_compare_all_ranked.csv : all structures ranked by aggregate consensus across tools\n")
+    if top_n:
+        lines.append(f"  - {base}_compare_all_top{top_n}.csv : top-N structures with within-top-N aggregate\n")
+    lines.append(f"  - {base}_compare_all_positional_consensus.html : per-position consensus across ALL structures (interactive)\n")
+    lines.append(f"  - {base}_compare_all_positional_entropy.html  : per-position Shannon entropy across ALL structures (interactive)\n\n")
+
+    lines.append("Notes:\n")
+    lines.append("  • HTML files are interactive; hover to see nt, value, and symbol frequencies.\n")
+
+    with open(p, "w") as fh:
+        fh.writelines(lines)
+    print(f"Summary file written: {p}")
+
 # ─── main ─────────────────────────────────────────────────────────────────────
 def main():
     p = argparse.ArgumentParser(description=__doc__)
@@ -153,7 +191,8 @@ def main():
                    help="Number of structures per ensemble (default from config)")
     p.add_argument("--top_n", type=int,
                    help="Number of top structures to output and analyze")
-    p.add_argument("-o", "--output_folder", default=".")
+    p.add_argument("-o", "--output_folder", default="compare_all_results",
+                   help="Output folder")
     p.add_argument("-c","--config", default="config.yaml",
                    help="YAML configuration file")
     args = p.parse_args()
@@ -385,6 +424,17 @@ def main():
         ent_html = os.path.join(args.output_folder, f"{base}_compare_all_positional_entropy.html")
         fig_ent.write_html(ent_html, auto_open=False)
         print("Wrote positional entropy plot to", ent_html)
+    
+        # --- write summary file
+        write_output_summary_compare_all(
+            out_dir=Path(args.output_folder),
+            base=base,
+            seq_label=args.sequence,
+            M=M,
+            top_n=top_n,
+            scoring_method=scoring_method
+        )
+
 
     finally:
         shutil.rmtree(tmpdir)

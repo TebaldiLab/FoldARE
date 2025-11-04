@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ensembleFold.py
+foldare.py
 
 2D RNA structure prediction pipeline (ensemble → SHAPE → predictor).
 
@@ -36,13 +36,13 @@ Outputs (in `<output_folder>`):
   • `<basename>_<ensemble>_<predictor>_final.db` — final predicted structure  
 
 Usage example:
-    python ensembleFold.py \
+    python foldare.py \
       -s sequence.fasta \
       -e L \
       -p R \
       --ens_n 30 \
       -c config.yaml \
-      -o results_dir \
+      -o foldare_results \
       --shape existing_shape.txt
 """
 import os
@@ -50,6 +50,7 @@ import argparse
 from inspect import signature
 from pathlib import Path
 from ruamel.yaml import YAML
+from datetime import datetime
 from utils import (
     RNAStructure, RNAFold, RNASubopt,
     clean_ensemble_file, create_shape_file,
@@ -97,6 +98,87 @@ def clean_in_place(db_path: str):
     clean_ensemble_file(db_path, tmp_path)
     os.replace(tmp_path, db_path)
 
+def write_ensemblefold_summary(
+    out_dir: str,
+    base_name: str,
+    sequence_path: str,
+    ensemble_tool: str,
+    predictor_tool: str,
+    ens_m6a: bool,
+    pred_m6a: bool,
+    ensemble_target: int | None,
+    nsamples: int | None,
+    maxm: int | None,
+    par: int | None,
+    delta: float | None,
+    shape_source: str = "generated from ensemble",
+):
+    """
+    Create <base_name>_foldare_summary.txt describing inputs, params, and outputs.
+    Only lists files that actually exist in out_dir.
+    """
+    out_path = os.path.join(out_dir, f"{base_name}_foldare_summary.txt")
+
+    def _exists(fname: str) -> bool:
+        return bool(fname) and os.path.exists(fname)
+
+    # Compose canonical output filenames that this pipeline uses
+    # (some may not exist depending on branches; we check before listing)
+    ens_db_candidates = [
+        os.path.join(out_dir, f"{base_name}_{ensemble_tool}_ens.db"),
+        os.path.join(out_dir, f"{base_name}_{ensemble_tool}_ens_m6A.db"),   # historical/alt
+    ]
+    shape_txt = os.path.join(out_dir, f"{base_name}_shape.txt")
+    bpseq     = os.path.join(out_dir, f"{base_name}_shape.bpseq")  # EternaFold predictor only
+
+    # Collect existing artifacts
+    generated = []
+    for p in ens_db_candidates:
+        if _exists(p):
+            generated.append((os.path.basename(p), "Ensemble of sampled/suboptimal structures"))
+    if _exists(shape_txt):
+        generated.append((os.path.basename(shape_txt), "Per-nucleotide SHAPE reactivities used for prediction"))
+    if _exists(bpseq):
+        generated.append((os.path.basename(bpseq), "BPSEQ converted from SHAPE (EternaFold predictor)"))
+
+    # Try to detect final .db files produced (patterned by code paths)
+    for fname in os.listdir(out_dir):
+        if fname.startswith(base_name) and fname.endswith("_final.db"):
+            generated.append((fname, "Final predicted structure (dot-bracket)"))
+
+    lines = []
+    lines.append("FoldARE – Output Summary\n")
+    lines.append("=" * 60 + "\n\n")
+    lines.append(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+    lines.append(f"Sequence file:  {os.path.abspath(sequence_path)}\n")
+    lines.append(f"Output folder:  {os.path.abspath(out_dir)}\n\n")
+
+    lines.append("Tools\n")
+    lines.append(f"  Ensemble tool : {ensemble_tool} {'(m6A)' if ens_m6a else ''}\n")
+    lines.append(f"  Predictor tool: {predictor_tool} {'(m6A)' if pred_m6a else ''}\n\n")
+
+    lines.append("Key parameters\n")
+    lines.append(f"  global_ensemble_size (target): {ensemble_target}\n")
+    lines.append(f"  nsamples/n_struc (effective)  : {nsamples}\n")
+    if maxm is not None: lines.append(f"  maxm (RNAStructure)           : {maxm}\n")
+    if par  is not None: lines.append(f"  par  (RNAsubopt)              : {par}\n")
+    if delta is not None: lines.append(f"  delta (LinearFold)            : {delta}\n")
+    lines.append(f"  SHAPE input source            : {shape_source}\n")
+
+    if generated:
+        lines.append("Generated files\n")
+        for fn, desc in generated:
+            lines.append(f"  - {fn:<45} : {desc}\n")
+        lines.append("\n")
+    else:
+        lines.append("Generated files: (none detected)\n\n")
+
+    with open(out_path, "w") as fh:
+        fh.writelines(lines)
+
+    print(f"Summary file written: {out_path}")
+
+
 # -----------------------------------------------------------------------------
 # CLI -------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -108,7 +190,7 @@ parser.add_argument( "-e", "--ensemble", required=True,
                     choices=list(LETTER_MAP.keys()) + list(LETTER_MAP.values()),
                     help="Ensemble tool (E, V, R, L, R6, V6)")
 parser.add_argument("-s", "--sequence", required=True, help="Input FASTA file")
-parser.add_argument("-o", "--output_folder", default=".")
+parser.add_argument("-o", "--output_folder", default="foldare_results", help="Output folder")
 parser.add_argument("-c", "--config", default="config.yaml", help="YAML configuration file")
 parser.add_argument("--shape", help="Existing SHAPE file – skip ensemble step")
 
@@ -359,3 +441,21 @@ else:
 
 print("Pipeline completed – outputs in", os.path.abspath(args.output_folder))
 print("Result file:", os.path.abspath(pred_out))
+
+# --- Write concise summary file
+shape_source = "generated from ensemble" if args.shape is None else f"provided file: {os.path.abspath(args.shape)}"
+write_ensemblefold_summary(
+    out_dir=args.output_folder,
+    base_name=base_name,
+    sequence_path=args.sequence,
+    ensemble_tool=args.ensemble.lower(),     
+    predictor_tool=ptool,                    
+    ens_m6a=ens_m6a,
+    pred_m6a=pred_m6a,
+    ensemble_target=ensemble_target,
+    nsamples=nsamples,
+    maxm=maxm,
+    par=par,
+    delta=delta,
+    shape_source=shape_source,
+)
