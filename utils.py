@@ -177,6 +177,9 @@ def create_shape_file(ensemble_file, shape_file_out, thresholds, coefficients):
             value = prob * coefficients["low"]
         else:
             value = coefficients["default"]
+
+        if value == 0:
+            continue  # skip zero values
         
         shape_lines += f"{pos} {value}\n"
     
