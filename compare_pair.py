@@ -12,7 +12,8 @@ RNAstructure, or LinearFold), then compute and visualize how they agree:
     at each nucleotide position across the two sets.
  3. Compute and plot positional consensus score (HTML), the fraction of
     structures agreeing at each position.
- 4. Optionally, extract the top-N best pairs of structures by average consensus and
+ 4. Compute and plot the fraction of unpaired ('.') nucleotides at each position.
+ 5. Optionally, extract the top-N best pairs of structures by average consensus and
     write them to a CSV.
 
 Usage example:
@@ -183,7 +184,7 @@ def write_output_summary_compare_pair(
     """
     Create <base>_compare_pair_summary.txt describing outputs of compare_pair.py.
     """
-    p = out_dir / f"{base}_compare_pair_summary.txt"
+    p = out_dir / f"{base}_compare_{e1}_{e2}_pair_summary.txt"
     lines = []
     lines.append("compare_pair.py – Output Summary\n")
     lines.append("="*56 + "\n\n")
@@ -198,11 +199,13 @@ def write_output_summary_compare_pair(
     lines.append(f"Output folder: {out_dir.resolve()}\n\n")
 
     lines.append("[Generated files]\n")
-    lines.append(f"  - {base}_compare_pair_heatmap.html               : N×N similarity heatmap (interactive)\n")
-    lines.append(f"  - {base}_compare_pair_positional_entropy.html   : per-position Shannon entropy, both methods overlaid (interactive)\n")
-    lines.append(f"  - {base}_compare_pair_structural_consensus.html : per-position consensus, both methods overlaid (interactive)\n")
+    lines.append(f"  - {base}_compare_{e1}_{e2}_heatmap.html               : N×N similarity heatmap (interactive)\n")
+    lines.append(f"  - {base}_compare_{e1}_{e2}_positional_entropy.html   : per-position Shannon entropy, both methods overlaid (interactive)\n")
+    lines.append(f"  - {base}_compare_{e1}_{e2}_structural_consensus.html : per-position consensus, both methods overlaid (interactive)\n")
+    lines.append(f"  - {base}_compare_{e1}_{e2}_fraction_ssRNA.html      : per-position fraction of '.' (unpaired), both methods overlaid (interactive)\n")
+
     if top_n:
-        lines.append(f"  - {base}_compare_pair_best_pairs.csv            : top-N structure pairs by similarity\n")
+        lines.append(f"  - {base}_compare_{e1}_{e2}_best_pairs.csv            : top-N structure pairs by similarity\n")
     lines.append("\nNotes:\n")
     lines.append("  • Heatmap hover shows pairwise similarity and truncated structures.\n")
     lines.append("  • Entropy/consensus plots are chunked over rows for long sequences; hover for nt and per-symbol fractions.\n")
@@ -318,8 +321,8 @@ def main():
         )
         fig.update_layout(font_family="Courier New")
 
-        fig.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_heatmap.html"), auto_open=False)
-        print("Wrote heatmap to", os.path.join(args.output_folder, f"{base}_compare_pair_heatmap.html"))
+        fig.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_heatmap.html"), auto_open=False)
+        print("Wrote heatmap to", os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_heatmap.html"))
 
         # ─── Positional entropy & consensus ───────────────────────────────────────────
         # Compute global entropy for each ensemble
@@ -451,8 +454,8 @@ def main():
             legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
         )
 
-        fig_e.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_positional_entropy.html"), auto_open=False)
-        print("Wrote positional entropy plot to", os.path.join(args.output_folder, f"{base}_compare_pair_positional_entropy.html"))
+        fig_e.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_positional_entropy.html"), auto_open=False)
+        print("Wrote positional entropy plot to", os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_positional_entropy.html"))
 
         # ─── Positional consensus plot (adaptive rows, scrollable width) ─────────────
         fig_c = make_subplots(
@@ -521,8 +524,86 @@ def main():
             legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
         )
 
-        fig_c.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_structural_consensus.html"), auto_open=False)
-        print("Wrote structural consensus plot to", os.path.join(args.output_folder, f"{base}_compare_pair_structural_consensus.html"))
+        fig_c.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_structural_consensus.html"), auto_open=False)
+        print("Wrote structural consensus plot to", os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_structural_consensus.html"))
+
+        # ─── Per-position fraction of unpaired '.' (adaptive rows) ─────────────
+        pos_ss1 = freq1["."]  # length = seq_len
+        pos_ss2 = freq2["."]
+
+        fig_ss = make_subplots(
+            rows=nrows, cols=1,
+            shared_xaxes=False,
+            subplot_titles=[
+                f"Positions {r*chunk_size+1}-{min((r+1)*chunk_size, seq_len)}"
+                for r in range(nrows)
+            ]
+        )
+
+        for r in range(nrows):
+            start = r * chunk_size + 1
+            end   = min((r+1) * chunk_size, seq_len)
+            xs    = list(range(start + 1, end + 1))
+
+            # ensembler 1
+            fig_ss.add_trace(
+                go.Scatter(
+                    x=xs, y=pos_ss1[start:end],
+                    mode='lines+markers',
+                    name=f"{letter_map[e1]} unpaired '.' (row {r+1})",
+                    line=dict(color=ENSEMBLE_COLORS[e1]),
+                    marker=dict(color=ENSEMBLE_COLORS[e1]),
+                    hovertext=[
+                        (
+                            f"pos={'0' + str(i) if i < 10 else str(i)}"
+                            f"<br>nt={seq[i-1]}"
+                            f"<br>frac '.'={pos_ss1[i-1]:.3f}"
+                            f"<br>(={freq1['('][i-1]:.3f} )={freq1[')'][i-1]:.3f} .={freq1['.'][i-1]:.3f}"
+                        )
+                        for i in xs
+                    ],
+                ),
+                row=r+1, col=1
+            )
+
+            # ensembler 2
+            fig_ss.add_trace(
+                go.Scatter(
+                    x=xs, y=pos_ss2[start:end],
+                    mode='lines+markers',
+                    name=f"{letter_map[e2]} unpaired '.' (row {r+1})",
+                    line=dict(color=ENSEMBLE_COLORS[e2]),
+                    marker=dict(color=ENSEMBLE_COLORS[e2]),
+                    hovertext=[
+                        (
+                            f"pos={'0' + str(i) if i < 10 else str(i)}"
+                            f"<br>nt={seq[i-1]}"
+                            f"<br>frac '.'={pos_ss2[i-1]:.3f}"
+                            f"<br>(={freq2['('][i-1]:.3f} )={freq2[')'][i-1]:.3f} .={freq2['.'][i-1]:.3f}"
+                        )
+                        for i in xs
+                    ],
+                ),
+                row=r+1, col=1
+            )
+
+            fig_ss.update_xaxes(range=[start - 0.5, end + 1], row=r + 1, col=1)
+            fig_ss.update_yaxes(range=[0, 1.05], row=r + 1, col=1)
+
+        fig_ss.update_layout(
+            title_text="Per-position fraction of unpaired nucleotides ('.')",
+            xaxis_title="Position",
+            yaxis_title="Fraction '.'",
+            font_family="Courier New",
+            width=max(row_width_px, 1000),   # horizontally scrollable like others
+            height=max(700, 235 * nrows),
+            margin=dict(l=60, r=20, t=180, b=40),
+            legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
+        )
+
+        ss_html = os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_fraction_ssRNA.html")
+        fig_ss.write_html(ss_html, auto_open=False)
+        print("Wrote fraction-unpaired plot to", ss_html)
 
         if top_n:
             # Sort all pairs by consensus score, descending
@@ -532,7 +613,7 @@ def main():
             best_pairs = pair_scores[:min(top_n, len(pair_scores))]
             
             # Write to CSV
-            best_file = os.path.join(args.output_folder, f"{base}_compare_pair_best_pairs.csv")
+            best_file = os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_best_pairs.csv")
             with open(best_file, 'w') as fh:
                 fh.write(f"{e1}_index,{e2}_index,{e1}_structure,{e2}_structure,similarity_score\n")
                 for i, j, s1, s2, score in best_pairs:
