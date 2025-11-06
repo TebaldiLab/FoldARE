@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 compare_m6a.py
 
@@ -48,7 +49,7 @@ LETTER_MAP = {
 
 ENSEMBLE_COLORS = {
     'V': 'red',
-    'R': 'purple',
+    'R': '#bfb6db',  # a lighter purple
     'V6': 'lightcoral',
     'R6': 'violet'
 }
@@ -290,6 +291,7 @@ def write_output_summary(out_dir: Path, base: str, want_V: bool, want_R: bool, M
         lines.append(f"  - {base}_m6A_Vienna_ens.db       : Ensemble of m6A-modified structures\n")
         lines.append(f"  - {base}_Vienna_no_mod_vs_m6A_entropy.html : Positional Shannon entropy comparison (no_mod vs m6A) (interactive)\n")
         lines.append(f"  - {base}_Vienna_no_mod_vs_m6A_consensus.html : Positional consensus comparison (no_mod vs m6A) (interactive)\n\n")
+        lines.append(f"  - {base}_Vienna_no_mod_vs_m6A_dotFreq.html : Frequency of unpaired positions ('.') (no_mod vs m6A) (interactive)\n\n")
 
     if want_R:
         lines.append("[RNAstructure]\n")
@@ -297,11 +299,14 @@ def write_output_summary(out_dir: Path, base: str, want_V: bool, want_R: bool, M
         lines.append(f"  - {base}_m6A_RNAStructure_ens.db : Ensemble of m6A-modified structures\n")
         lines.append(f"  - {base}_RNAStructure_no_mod_vs_m6A_entropy.html : Positional Shannon entropy comparison (no_mod vs m6A) (interactive)\n")
         lines.append(f"  - {base}_RNAStructure_no_mod_vs_m6A_consensus.html : Positional consensus comparison (no_mod vs m6A) (interactive)\n\n")
+        lines.append(f"  - {base}_RNAStructure_no_mod_vs_m6A_dotFreq.html : Frequency of unpaired positions ('.') (no_mod vs m6A) (interactive)\n\n")
 
     if want_V and want_R:
         lines.append("[Cross-tool comparison on m6A sequence]\n")
         lines.append(f"  - {base}_m6A_crossTool_entropy.html   : Entropy comparison between ViennaRNA and RNAstructure (interactive)\n")
         lines.append(f"  - {base}_m6A_crossTool_consensus.html : Consensus comparison between ViennaRNA and RNAstructure (interactive)\n\n")
+        lines.append(f"  - {base}_m6A_crossTool_dotFreq.html   : Frequency of unpaired positions ('.') comparison between ViennaRNA and RNAstructure (interactive)\n\n")
+
 
     lines.append("Notes:\n")
     lines.append("Each HTML file is interactive (Plotly). Hover over points for per-nucleotide statistics.\n")
@@ -405,6 +410,22 @@ def main():
                 mods=mods
             )
 
+
+# --- New plot: frequency of unpaired (".") positions ---
+            plot_series_over_positions(
+                seq=seq_no_mod,
+                ys_list=[freq_no_mod['.'], freq_m6['.']],
+                labels=["Vienna no_mod", "Vienna m6A"],
+                colors=[ENSEMBLE_COLORS['V'], ENSEMBLE_COLORS['V6']],
+                freq_list=[freq_no_mod, freq_m6],
+                title="Positional ssRNA Frequency ViennaRNA (no_mod vs m6A)",
+                y_title="Frequency of ssRNA (unpaired)",
+                out_html=str(out_dir / f"{base}_Vienna_no_mod_vs_m6A_dotFreq.html"),
+                mods=mods
+            )
+
+
+
         if want_R:
             ent_no_mod,  cons_no_mod,  freq_no_mod  = positional_stats_with_freq(results[('R','no_mod')])
             ent_m6,  cons_m6,  freq_m6  = positional_stats_with_freq(results[('R','m6A')])
@@ -431,6 +452,21 @@ def main():
                 out_html=str(out_dir / f"{base}_RNAStructure_no_mod_vs_m6A_consensus.html"),
                 mods=mods
             )
+
+# --- New plot: frequency of unpaired (".") positions ---
+            plot_series_over_positions(
+                seq=seq_no_mod,
+                ys_list=[freq_no_mod['.'], freq_m6['.']],
+                labels=["RNAstructure no_mod", "RNAstructure m6A"],
+                colors=[ENSEMBLE_COLORS['R'], ENSEMBLE_COLORS['R6']],
+                freq_list=[freq_no_mod, freq_m6],
+                title="Positional ssRNA Frequency RNAstructure (no_mod vs m6A)",
+                y_title="Frequency of ssRNA (unpaired)",
+                out_html=str(out_dir / f"{base}_RNAStructure_no_mod_vs_m6A_dotFreq.html"),
+                mods=mods
+            )
+
+
 
         # Cross-tool on m6A sequence (character breakdown shown for each tool)
         if want_V and want_R:
@@ -459,6 +495,21 @@ def main():
                 out_html=str(out_dir / f"{base}_m6A_crossTool_consensus.html"),
                 mods=mods
             )
+
+
+            # --- New cross-tool plot: frequency of unpaired (".") positions ---
+            plot_series_over_positions(
+                seq=seq_m6a,
+                ys_list=[freq_V_m6['.'], freq_R_m6['.']],
+                labels=["Vienna m6A", "RNAstructure m6A"],
+                colors=[ENSEMBLE_COLORS['V6'], ENSEMBLE_COLORS['R6']],
+                freq_list=[freq_V_m6, freq_R_m6],
+                title="Positional ssRNA freq (m6A Vienna vs m6A RNAstructure)",
+                y_title="Frequency of ssRNA (unpaired)",
+                out_html=str(out_dir / f"{base}_m6A_crossTool_dotFreq.html"),
+                mods=mods
+            )
+
 
         write_output_summary(out_dir, base, want_V, want_R, M=M, sequence=args.sequence)
         print("Done. Outputs in:", os.path.abspath(out_dir))
