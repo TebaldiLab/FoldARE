@@ -420,7 +420,7 @@ def main():
                 freq_list=[freq_no_mod, freq_m6],
                 title="Positional ssRNA Frequency ViennaRNA (no_mod vs m6A)",
                 y_title="Frequency of ssRNA (unpaired)",
-                out_html=str(out_dir / f"{base}_Vienna_no_mod_vs_m6A_dotFreq.html"),
+                out_html=str(out_dir / f"{base}_Vienna_no_mod_vs_m6A_fraction_ssRNA.html"),
                 mods=mods
             )
 
@@ -462,7 +462,7 @@ def main():
                 freq_list=[freq_no_mod, freq_m6],
                 title="Positional ssRNA Frequency RNAstructure (no_mod vs m6A)",
                 y_title="Frequency of ssRNA (unpaired)",
-                out_html=str(out_dir / f"{base}_RNAStructure_no_mod_vs_m6A_dotFreq.html"),
+                out_html=str(out_dir / f"{base}_RNAStructure_no_mod_vs_m6A_fraction_ssRNA.html"),
                 mods=mods
             )
 
@@ -506,7 +506,7 @@ def main():
                 freq_list=[freq_V_m6, freq_R_m6],
                 title="Positional ssRNA freq (m6A Vienna vs m6A RNAstructure)",
                 y_title="Frequency of ssRNA (unpaired)",
-                out_html=str(out_dir / f"{base}_m6A_crossTool_dotFreq.html"),
+                out_html=str(out_dir / f"{base}_m6A_crossTool_fraction_ssRNA.html"),
                 mods=mods
             )
 
