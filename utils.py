@@ -382,16 +382,9 @@ def identity_score(struct1, struct2):
     if len(struct1) != len(struct2):
         raise ValueError("The two structures must have the same length.")
     
-    open_set = set("({[<")
-    close_set = set(")}]>")
-    
     match_count = 0
     for a, b in zip(struct1, struct2):
         if a == b:
-            match_count += 1
-        elif a in open_set and b in open_set:
-            match_count += 1
-        elif a in close_set and b in close_set:
             match_count += 1
         # else, no match at this position
     

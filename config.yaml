@@ -15,7 +15,7 @@ RNAStructure:
   executable: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/exe/Fold-smp"
   params:
     m6A: False # Whether to consider m6A modifications, default is False
-    maxm: 75 
+    maxm: 75 # Maximum number of structures to generate in ensemble mode
 
 RNAFold:
   # For RNAFold, we assume the command is available in PATH.
