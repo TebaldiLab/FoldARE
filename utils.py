@@ -141,7 +141,7 @@ def count_dots(ens):
         dots.append(dot_count / len(ens))
     return dots
 
-def create_shape_file(ensemble_file, shape_file_out, thresholds, coefficients):
+def create_shape_file(ensemble_file, shape_file_out, thresholds, coefficients, linearfold_style=False):
     """
     Create a shape file from the ensemble DB file using configurable thresholds and coefficients.
     The shape file contains one line per column in the format:
@@ -179,7 +179,10 @@ def create_shape_file(ensemble_file, shape_file_out, thresholds, coefficients):
             value = coefficients["default"]
 
         if value == 0:
-            continue  # skip zero values
+            if linearfold_style:
+                value = "NA"
+            else:
+                continue  # skip zero values
         
         shape_lines += f"{pos} {value}\n"
     
@@ -191,21 +194,16 @@ def create_shape_file(ensemble_file, shape_file_out, thresholds, coefficients):
 
 def convert_shape_to_bpseq(shape_file, bpseq_file, seq_file):
     """
-    Converts a .shape file to a .bpseq file.
-    
-    The .shape file is expected to have two whitespace-separated columns:
-        <position> <reactivity>
-    The output .bpseq file will have four columns:
+    Converts a (possibly sparse) .shape file to a .bpseq file.
+
+    Accepted .shape formats per line:
+        <position> <reactivity>   # sparse or dense, 1-based positions
+    Missing positions are filled with 0.0 so the output length matches the sequence.
+
+    Output .bpseq columns:
         <position> <nucleotide> e1 <reactivity_in_scientific_notation>
-    
-    The nucleotide information is obtained from the provided sequence file (FASTA format).
-    Lines in the sequence file starting with '>' are ignored.
-    
-    :param shape_file: Path to the input .shape file.
-    :param bpseq_file: Path to the output .bpseq file.
-    :param seq_file: Path to the sequence file (FASTA format).
     """
-    # Read nucleotide sequence from the sequence file.
+    # Read nucleotide sequence from the sequence file (FASTA allowed)
     seq_lines = []
     with open(seq_file, 'r') as f:
         for line in f:
@@ -214,35 +212,42 @@ def convert_shape_to_bpseq(shape_file, bpseq_file, seq_file):
                 continue
             seq_lines.append(line)
     sequence = "".join(seq_lines)
-    
-    # Read shape file values.
-    shape_values = []
+    L = len(sequence)
+
+    # Prepare zero-filled vector
+    shape_values = [-1.00E+00] * L
+
+    # Read SHAPE lines: allow sparse input with explicit positions
     with open(shape_file, 'r') as f:
         for line in f:
-            line = line.strip()
-            if not line:
+            s = line.strip()
+            if not s:
                 continue
-            parts = line.split()
+            parts = s.split()
+            # Expect "<pos> <value>"
             if len(parts) >= 2:
                 try:
-                    # Use the reactivity value (second column).
-                    reactivity = float(parts[1])
+                    pos = int(parts[0])
+                    val = float(parts[1])
                 except ValueError:
-                    reactivity = 0.0
-                shape_values.append(reactivity)
-    
-    if len(sequence) != len(shape_values):
-        raise ValueError("The length of the sequence does not match the number of shape values.")
-    
-    # Write bpseq file.
+                    # skip malformed lines silently
+                    continue
+                if 1 <= pos <= L:
+                    shape_values[pos - 1] = val
+            else:
+                # If only a single value is provided, we can't infer position safely → skip
+                # (old dense format without positions is discouraged now)
+                continue
+
+    # Write BPSEQ
     with open(bpseq_file, 'w') as out:
         for i, reactivity in enumerate(shape_values, start=1):
-            nt = sequence[i-1]
-            # Format reactivity in scientific notation with zero decimals.
+            nt = sequence[i - 1]
             formatted_reactivity = "{:.2E}".format(reactivity)
             out.write(f"{i} {nt} e1 {formatted_reactivity}\n")
-    
-    print(f"Converted {shape_file} to {bpseq_file}.")
+
+    print(f"Converted (sparse-aware) {shape_file} to {bpseq_file}.")
+
 
 
 def parse_dot_bracket(dot_bracket):

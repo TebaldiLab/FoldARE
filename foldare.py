@@ -371,6 +371,7 @@ if args.shape is None:
         shape_file,
         thresholds=shape_cfg.get("thresholds", {}),
         coefficients=shape_cfg.get("coefficients", {}),
+        linearfold_style=(args.predictor.lower() == "linearfold"),
     )
 else:
     shape_file = args.shape
