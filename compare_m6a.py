@@ -291,7 +291,7 @@ def write_output_summary(out_dir: Path, base: str, want_V: bool, want_R: bool, M
         lines.append(f"  - {base}_m6A_Vienna_ens.db       : Ensemble of m6A-modified structures\n")
         lines.append(f"  - {base}_Vienna_no_mod_vs_m6A_entropy.html : Positional Shannon entropy comparison (no_mod vs m6A) (interactive)\n")
         lines.append(f"  - {base}_Vienna_no_mod_vs_m6A_consensus.html : Positional consensus comparison (no_mod vs m6A) (interactive)\n\n")
-        lines.append(f"  - {base}_Vienna_no_mod_vs_m6A_dotFreq.html : Frequency of unpaired positions ('.') (no_mod vs m6A) (interactive)\n\n")
+        lines.append(f"  - {base}_Vienna_no_mod_vs_m6A_fraction_ssRNA.html : Frequency of unpaired positions ('.') (no_mod vs m6A) (interactive)\n\n")
 
     if want_R:
         lines.append("[RNAstructure]\n")
@@ -299,13 +299,13 @@ def write_output_summary(out_dir: Path, base: str, want_V: bool, want_R: bool, M
         lines.append(f"  - {base}_m6A_RNAStructure_ens.db : Ensemble of m6A-modified structures\n")
         lines.append(f"  - {base}_RNAStructure_no_mod_vs_m6A_entropy.html : Positional Shannon entropy comparison (no_mod vs m6A) (interactive)\n")
         lines.append(f"  - {base}_RNAStructure_no_mod_vs_m6A_consensus.html : Positional consensus comparison (no_mod vs m6A) (interactive)\n\n")
-        lines.append(f"  - {base}_RNAStructure_no_mod_vs_m6A_dotFreq.html : Frequency of unpaired positions ('.') (no_mod vs m6A) (interactive)\n\n")
+        lines.append(f"  - {base}_RNAStructure_no_mod_vs_m6A_fraction_ssRNA.html : Frequency of unpaired positions ('.') (no_mod vs m6A) (interactive)\n\n")
 
     if want_V and want_R:
         lines.append("[Cross-tool comparison on m6A sequence]\n")
         lines.append(f"  - {base}_m6A_crossTool_entropy.html   : Entropy comparison between ViennaRNA and RNAstructure (interactive)\n")
         lines.append(f"  - {base}_m6A_crossTool_consensus.html : Consensus comparison between ViennaRNA and RNAstructure (interactive)\n\n")
-        lines.append(f"  - {base}_m6A_crossTool_dotFreq.html   : Frequency of unpaired positions ('.') comparison between ViennaRNA and RNAstructure (interactive)\n\n")
+        lines.append(f"  - {base}_m6A_crossTool_fraction_ssRNA.html   : Frequency of unpaired positions ('.') comparison between ViennaRNA and RNAstructure (interactive)\n\n")
 
 
     lines.append("Notes:\n")

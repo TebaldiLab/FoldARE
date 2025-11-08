@@ -45,7 +45,7 @@ LETTER_MAP = {
 ENSEMBLE_COLORS = {
     'E': 'brown',
     'V': 'red',
-    'R': 'purple',
+    'R': '#bfb6db',  # a lighter purple
     'L': 'green',
 }
 
