@@ -46,9 +46,9 @@ letter_map = {'E': 'EternaFold',
 ENSEMBLE_COLORS = {
     'E': 'brown',
     'V': 'red',
-    'R': '#bfb6db',  # a lighter purple
+    'R': '#9b99fc',  # a lighter purple
     'L': 'green',
-    'V6': 'lightcoral',
+    'V6': '#f8c9aa',
     'R6': 'violet'
 }
 
