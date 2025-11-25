@@ -50,7 +50,6 @@ def EternaFold(seq_file, out_file, mode="predict", executable="./../EternaFold-m
       contrafold_run sample <seq_file> --params <enernaFold_params> --nsamples <nsamples> > <out_file>
     In predictor mode (mode="predict"), it runs:
       contrafold_run predict <seq_file> --params <enernaFold_params> > <out_file>
-    (No SHAPE integration implemented for EnernaFold yet.)
     """
     if mode == "sample":
         command = (f"{executable} sample {seq_file} --params {eternaFold_params} "
