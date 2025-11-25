@@ -11,6 +11,7 @@ aggregate each structure’s total score, rank them, and report:
  2. Top‐N structures CSV (if --top_n given)
  3. Positional consensus score plot (HTML)
  4. Positional Shannon entropy plot (HTML)
+ 5. Positional unpairing probability plot (HTML)
 
  Usage example:
     python compare_all.py \
@@ -173,7 +174,8 @@ def write_output_summary_compare_all(
     if top_n:
         lines.append(f"  - {base}_compare_all_top{top_n}.csv : top-N structures with within-top-N aggregate\n")
     lines.append(f"  - {base}_compare_all_positional_consensus.html : per-position consensus across ALL structures (interactive)\n")
-    lines.append(f"  - {base}_compare_all_positional_entropy.html  : per-position Shannon entropy across ALL structures (interactive)\n\n")
+    lines.append(f"  - {base}_compare_all_positional_entropy.html  : per-position Shannon entropy across ALL structures (interactive)\n")
+    lines.append(f"  - {base}_compare_all_fraction_ssRNA.html      : per-position fraction of unpaired nucleotides ('.') across ALL structures (interactive)\n\n")
 
     lines.append("Notes:\n")
     lines.append("  • HTML files are interactive; hover to see nt, value, and symbol frequencies.\n")
@@ -424,6 +426,62 @@ def main():
         ent_html = os.path.join(args.output_folder, f"{base}_compare_all_positional_entropy.html")
         fig_ent.write_html(ent_html, auto_open=False)
         print("Wrote positional entropy plot to", ent_html)
+
+        # ─── Per-position fraction of unpaired '.' (adaptive rows) ─────────────
+        pos_ss_all = freq_all["."]  # length = Lseq
+
+        fig_ss = make_subplots(
+            rows=nrows, cols=1,
+            shared_xaxes=False,
+            subplot_titles=[
+                f"Positions {r*chunk_size+1}-{min((r+1)*chunk_size, Lseq)}"
+                for r in range(nrows)
+            ]
+        )
+
+        for r in range(nrows):
+            start = r * chunk_size
+            end   = min(start + chunk_size, Lseq)
+            xs    = list(range(start+1, end+1))
+
+            fig_ss.add_trace(
+                go.Scatter(
+                    x=xs, y=pos_ss_all[start:end],
+                    mode='lines+markers',
+                    name=f"Fraction '.' (row {r+1})",
+                    line=dict(color='blue'),
+                    marker=dict(color='blue'),
+                    hovertext=[
+                        (
+                            f"pos={'0' + str(i) if i < 10 else i}"
+                            f"<br>nt={seq[i-1]}"
+                            f"<br>frac '.'={pos_ss_all[i-1]:.3f}"
+                            f"<br>(={freq_all['('][i-1]:.3f} )={freq_all[')'][i-1]:.3f} .={freq_all['.'][i-1]:.3f}"
+                        )
+                        for i in xs
+                    ],
+                    hoverlabel=dict(font=dict(family="Courier New", size=14)),
+                ),
+                row=r+1, col=1
+            )
+
+            fig_ss.update_xaxes(range=[start - 0.5, end + 0.5], row=r + 1, col=1)
+            fig_ss.update_yaxes(range=[0, 1.05], row=r + 1, col=1)
+
+        fig_ss.update_layout(
+            title_text="Per-position fraction of unpaired nucleotides ('.')",
+            xaxis_title="Position",
+            yaxis_title="Fraction of unpaired nucleotides",
+            font_family="Courier New",
+            width=max(row_width_px, 1000),
+            height=max(700, 235 * nrows),
+            margin=dict(l=60, r=20, t=140, b=40),
+            legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
+        )
+
+        ss_html = os.path.join(args.output_folder, f"{base}_compare_all_fraction_ssRNA.html")
+        fig_ss.write_html(ss_html, auto_open=False)
+        print("Wrote positional unpairing plot to", ss_html)
     
         # --- write summary file
         write_output_summary_compare_all(
@@ -434,7 +492,6 @@ def main():
             top_n=top_n,
             scoring_method=scoring_method
         )
-
 
     finally:
         shutil.rmtree(tmpdir)

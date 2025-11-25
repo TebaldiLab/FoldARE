@@ -202,7 +202,7 @@ def write_output_summary_compare_pair(
     lines.append(f"  - {base}_compare_{e1}_{e2}_heatmap.html               : N×N similarity heatmap (interactive)\n")
     lines.append(f"  - {base}_compare_{e1}_{e2}_positional_entropy.html   : per-position Shannon entropy, both methods overlaid (interactive)\n")
     lines.append(f"  - {base}_compare_{e1}_{e2}_structural_consensus.html : per-position consensus, both methods overlaid (interactive)\n")
-    lines.append(f"  - {base}_compare_{e1}_{e2}_fraction_ssRNA.html      : per-position fraction of '.' (unpaired), both methods overlaid (interactive)\n")
+    lines.append(f"  - {base}_compare_{e1}_{e2}_fraction_ssRNA.html      : per-position fraction of unpaired nucleotides ('.'), both methods overlaid (interactive)\n")
 
     if top_n:
         lines.append(f"  - {base}_compare_{e1}_{e2}_best_pairs.csv            : top-N structure pairs by similarity\n")
@@ -593,7 +593,7 @@ def main():
         fig_ss.update_layout(
             title_text="Per-position fraction of unpaired nucleotides ('.')",
             xaxis_title="Position",
-            yaxis_title="Fraction '.'",
+            yaxis_title="Fraction of unpaired nucleotides",
             font_family="Courier New",
             width=max(row_width_px, 1000),   # horizontally scrollable like others
             height=max(700, 235 * nrows),
@@ -603,7 +603,7 @@ def main():
 
         ss_html = os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_fraction_ssRNA.html")
         fig_ss.write_html(ss_html, auto_open=False)
-        print("Wrote fraction-unpaired plot to", ss_html)
+        print("Wrote positional unpairing plot to", ss_html)
 
         if top_n:
             # Sort all pairs by consensus score, descending
