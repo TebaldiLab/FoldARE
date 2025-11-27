@@ -3,16 +3,18 @@
 FoldARE is a computatonal tool for the prediction and analysis of RNA secondary structure.  
 The prediction step is based on a two-step strategy:  
 
- step 1 - from an RNA fasta:  (a)  predicts an ensemble, (b)  through stastical weighting creates a pseudo-SHAPE co-input  
- step 2 - from the same RNA fasta, uses the pseudo-SHAPE co-input to predict the final 2D structure 
+&nbsp;&nbsp; step 1 - from an RNA fasta:  (a)  predicts an ensemble, (b)  through stastical weighting creates a pseudo-SHAPE co-input  
+&nbsp;&nbsp; step 2 - uses the pseudo-SHAPE file generate in step1 as a guide co-input to predict the final 2D structure 
     
-It builds on the combination of some available, well established, methods: V, R, L, E  (for ViennaRNA, RNAstructure, LinearFold, EternaFold).  
-In its default mode, it runs EternaFold for step1 and RNAstructure for step2.
+It builds on the combination of some external methods: V, R, L, E  (for ViennaRNA, RNAstructure, LinearFold, EternaFold).  
+Any of these methods can be used interchangeably for creating ensembles (step1) or predicting w/ the pseudo-SHAPE co-input (step2).  
+  
+In its default mode, FoldARE runs EternaFold for step1 and RNAstructure for step2.
 
 ## Installation
 Clone the repository:
 ```bash
-git clone https://github.com/yourusername/FoldARE.git
+git clone https://github.com/TebaldiLab/FoldARE.git
 cd FoldARE
 ```
 note:  FoldARE pipeline requires command-line installations of the four external methods (V, R, L, E mentioned above);&nbsp; once installed, update the path accordingly, in the config.yaml file. &nbsp; For example, for LinearFold (if installed in /home/user/) edit the config.yaml :
@@ -23,7 +25,7 @@ executable: "/home/user/LinearFold/linearfold"
   
 similarly, edit the executable path for RNAstructure, EternaFold, ViennaRNA.  
   
--- Dependencies:    
+-- prerequisite  
 python3 (3.10+)
 
 
@@ -33,13 +35,13 @@ python3 (3.10+)
 python foldare.py -s input_fasta
 ```
 arguments:
-<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> -s = the RNA sequence in FASTA format </pre>
+<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">    -s: the RNA sequence in FASTA format </pre>
 optional arguments:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
 	-e: the choice of the method used to create the ensemble of step 1 
 	-p: the choice of method used to predict (w/ pseudo-SHAPE co-input)
-	--ens_n: max number of models in the ensemble 
- </pre>
+	--ens_n: max number of models in the ensemble
+</pre>
 example:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> python foldare.py -s test.fasta -e E -p R --ens_n 75</pre>
 
@@ -55,30 +57,31 @@ FoldARE allows for three different analyses:
 python compare_all.py -s input_fasta
 ```
 arguments:
-<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> -s = the RNA sequence in FASTA format </pre>
+<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">    -s: the RNA sequence in FASTA format </pre>
 optional arguments:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
--n = ensemble size (set the size of ensemble)
---top_n = number of top models (for each method) to be considered for the aggregate scoring
+    -n: ensemble size (set the size of ensemble)
+    --top_n: number of top models (for each method) to be considered for the aggregate scoring
 </pre>
 example:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> python compare_all.py -s test.fasta -n 50 --top_n 10 </pre>
 
 
+  
 ### compare pair
 ```bash
 python compare_pair.py -s input_fasta -e1 method -e2 method
 ```
 arguments:
-<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> 
- -s = the RNA sequence in FASTA format 
-	-e1: the choice of the first method to compare 
-	-e2: the choice of the second method to compare
+<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
+   -s: the RNA sequence in FASTA format 
+   -e1: the choice of the first method to compare 
+   -e2: the choice of the second method to compare
 </pre>
 optional arguments:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
--n = ensemble size (set the size of ensemble)
---top_n = number of top models (for each method) to be considered for the aggregate scoring
+   -n: ensemble size (set the size of ensemble)
+   --top_n: number of top models (for each method) to be considered for the aggregate scoring
 </pre>
 example:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> python compare_pair.py -s test.fasta -e1 L -e2 E -n 50 --top_n 10 </pre>
@@ -88,13 +91,13 @@ example:
 python compare_m6a.py -s input_fasta -m mods.txt 
 ```
 arguments:
-<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> 
--s = the RNA sequence in FASTA format 
+<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
+   -s: the RNA sequence in FASTA format 
 </pre>
 optional arguments:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
--n = ensemble size (set the size of ensemble)
---tool = tool used for m6A modification (options: V, R, both; default = "--tool both")
+   -n = ensemble size (set the size of ensemble)
+   --tool = tool used for m6A modification (options: V, R, both; default = "--tool both")
 </pre>
 example:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> python compare_m6a.py -s test.fasta -m mods.txt -n 50 --tool R </pre>
