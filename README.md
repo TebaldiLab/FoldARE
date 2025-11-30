@@ -20,8 +20,10 @@ cd FoldARE
 note:  FoldARE pipeline requires command-line installations of the four external methods (V, R, L, E mentioned above);&nbsp; once installed, update the path accordingly, in the config.yaml file. &nbsp; For example, for LinearFold (if installed in /home/user/) edit the config.yaml :
 
 LinearFold:  
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;executable: "/home/user/LinearFold/linearfold"
-executable: "/home/user/LinearFold/linearfold"  
+```yaml
+LinearFold:
+    executable: "/home/user/LinearFold/linearfold"  
+```
   
 similarly, edit the executable path for RNAstructure, EternaFold, ViennaRNA.  
 Versions used for development:  
@@ -30,9 +32,9 @@ ViennaRNA (v2.7.0), &nbsp;RNAstructure (v6.5), &nbsp;LinearFold (commit c3ee9bd 
   
 ### requirements  
 FoldARE was implemented in Python 3.10; Python libraries included: numpy, pandas, plotly, ruamel.yaml.  
-The full micromamba environment is provided in dependencies.yaml ; to reconstruct the environment:  
+The full conda environment is provided in dependencies.yaml ; to reconstruct the environment:  
 ```bash
-micromamba env create -f dependencies.yaml
+conda env create -f dependencies.yaml
 ```
 
 ## PREDICTION 
@@ -41,7 +43,8 @@ micromamba env create -f dependencies.yaml
 python foldare.py -s input_fasta
 ```
 arguments:
-<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">    -s: RNA sequence in FASTA format </pre>
+<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
+    -s: RNA sequence in FASTA format </pre>
 optional arguments:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
 	-e: choice of the method used to create the ensemble of step 1 
@@ -70,7 +73,7 @@ optional arguments:
     --top_n: number of top models (for each method) to be considered for the aggregate scoring
 </pre>
 example:
-<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> python compare_all.py -s test.fasta -n 50 --top_n 10 </pre>
+<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">python compare_all.py -s test.fasta -n 50 --top_n 10 </pre>
 
 
 ### compare pair

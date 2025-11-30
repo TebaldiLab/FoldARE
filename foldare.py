@@ -183,11 +183,11 @@ def write_ensemblefold_summary(
 # CLI -------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 parser = argparse.ArgumentParser(description="Sequence-level RNA prediction pipeline (ensemble → SHAPE → predictor)")
-parser.add_argument("-p", "--predictor", required=True,
-                    choices=list(LETTER_MAP.keys()) + list(LETTER_MAP.values()),
+parser.add_argument("-p", "--predictor",
+                    choices=list(LETTER_MAP.keys()) + list(LETTER_MAP.values()), default="RNAStructure",
                     help="Tool used for final prediction (E, V, R, L, R6, V6)")
-parser.add_argument( "-e", "--ensemble", required=True,
-                    choices=list(LETTER_MAP.keys()) + list(LETTER_MAP.values()),
+parser.add_argument( "-e", "--ensemble",
+                    choices=list(LETTER_MAP.keys()) + list(LETTER_MAP.values()), default="EternaFold",
                     help="Ensemble tool (E, V, R, L, R6, V6)")
 parser.add_argument("-s", "--sequence", required=True, help="Input FASTA file")
 parser.add_argument("-o", "--output_folder", default="foldare_results", help="Output folder")
