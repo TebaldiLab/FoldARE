@@ -26,36 +26,47 @@ Usage example:
       -c config.yaml \
 """
 import argparse
-import tempfile
 import os
 import shutil
-from pathlib import Path
-from datetime import datetime
+import tempfile
 from collections import Counter
+from datetime import datetime
+from pathlib import Path
 
 from ruamel.yaml import YAML
+
 import utils
 
-letter_map = {'E': 'EternaFold',
-                'V': 'RNASubopt',
-                'R': 'RNAStructure',
-                'L': 'LinearFold',
-                'V6': 'RNASubopt_m6A',
-                'R6': 'RNAStructure_m6A'}
+LETTER_MAP = {
+    "E": "EternaFold",
+    "V": "RNASubopt",
+    "R": "RNAStructure",
+    "L": "LinearFold",
+    "V6": "RNASubopt_m6A",
+    "R6": "RNAStructure_m6A",
+}
 
 ENSEMBLE_COLORS = {
-    'E': 'brown',
-    'V': 'red',
-    'R': '#9b99fc',  # a lighter purple
-    'L': 'green',
-    'V6': '#f8c9aa',
-    'R6': 'violet'
+    "E": "brown",
+    "V": "red",
+    "R": "#9b99fc",  # a lighter purple
+    "L": "green",
+    "V6": "#f8c9aa",
+    "R6": "violet",
 }
 
 def load_config(path: str):
     yaml = YAML(typ="safe")
     with open(path) as fh:
         return yaml.load(fh)
+
+
+def apply_environment(cfg: dict):
+    env = cfg.get("environment", {})
+    if env.get("data_tables"):
+        os.environ["DATAPATH"] = os.path.abspath(env["data_tables"])
+    if env.get("threads") is not None:
+        os.environ["OMP_NUM_THREADS"] = str(env["threads"])
 
 def load_sequence(path_or_seq: str) -> str:
     """If `path_or_seq` is a file, read FASTA (ignore headers), else return as-is."""
@@ -75,7 +86,7 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
     writing to out_db. Uses the executable & params from cfg.
     """
     m6A = False
-    tool_name = letter_map[letter]
+    tool_name = LETTER_MAP[letter]
     if tool_name == "RNASubopt_m6A":
         tool_name = "RNASubopt"
         m6A = True
@@ -83,8 +94,8 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
         tool_name = "RNAStructure"
         m6A = True
     tool_cfg  = cfg[tool_name]
-    exe        = tool_cfg['executable']
-    params     = tool_cfg.get('params', {})
+    exe = tool_cfg["executable"]
+    params = tool_cfg.get("params", {})
     params['m6A'] = False
     if m6A:
         params['m6A'] = True
@@ -240,11 +251,7 @@ def main():
 
     # ─── load config & env ─────────────────────────────────────────────────────
     CFG = load_config(args.config)
-    env = CFG.get("environment", {})
-    if env.get("data_tables"):
-        os.environ["DATAPATH"] = os.path.abspath(env["data_tables"])
-    if env.get("threads") is not None:
-        os.environ["OMP_NUM_THREADS"] = str(env["threads"])
+    apply_environment(CFG)
 
     # ─── determine scoring method ───────────────────────────────────────────────
     scoring_method = CFG.get("scoring", {}).get("method", "identity")
@@ -307,7 +314,7 @@ def main():
             textfont=dict(family="Courier New", size=12)
         ))
         fig.update_layout(
-            title=f"Similarity heatmap: {letter_map[e1]} vs {letter_map[e2]} (top {ens_n})",
+            title=f"Similarity heatmap: {LETTER_MAP[e1]} vs {LETTER_MAP[e2]} (top {ens_n})",
             xaxis_title=f"{e2} structures",
             yaxis_title=f"{e1} structures"
             # ensure square cells
@@ -343,8 +350,8 @@ def main():
 
         print(
             f"Average positional Shannon entropy: "
-            f"{letter_map[e1]} = {global_ent1:.3f}, "
-            f"{letter_map[e2]} = {global_ent2:.3f}"
+            f"{LETTER_MAP[e1]} = {global_ent1:.3f}, "
+            f"{LETTER_MAP[e2]} = {global_ent2:.3f}"
         )
 
         # Compute per-position entropy, consensus, and per-symbol frequencies
@@ -403,7 +410,7 @@ def main():
                 go.Scatter(
                     x=xs, y=pos_ent1[start:end],
                     mode='lines+markers',
-                    name=f"{letter_map[e1]} entropy, (row {r+1})",
+                    name=f"{LETTER_MAP[e1]} entropy, (row {r+1})",
                     line=dict(color=ENSEMBLE_COLORS[e1]),
                     marker=dict(color=ENSEMBLE_COLORS[e1]),
                     hovertext=[
@@ -423,7 +430,7 @@ def main():
                 go.Scatter(
                     x=xs, y=pos_ent2[start:end],
                     mode='lines+markers',
-                    name=f"{letter_map[e2]} entropy, (row {r+1})",
+                    name=f"{LETTER_MAP[e2]} entropy, (row {r+1})",
                     line=dict(color=ENSEMBLE_COLORS[e2]),
                     marker=dict(color=ENSEMBLE_COLORS[e2]),
                     hovertext=[
@@ -445,7 +452,7 @@ def main():
         fig_e.update_layout(
             title_text=(
                 f"Positional Shannon Entropy "
-                f"(global: {letter_map[e1]}={global_ent1:.3f}, {letter_map[e2]}={global_ent2:.3f})"
+                f"(global: {LETTER_MAP[e1]}={global_ent1:.3f}, {LETTER_MAP[e2]}={global_ent2:.3f})"
             ),
             font_family="Courier New",
             width=max(row_width_px, 1000),   # this makes each row horizontally scrollable in the browser
@@ -476,7 +483,7 @@ def main():
                 go.Scatter(
                     x=xs, y=pos_cons1[start:end],
                     mode='lines+markers',
-                    name=f"{letter_map[e1]} consensus, (row {r+1})",
+                    name=f"{LETTER_MAP[e1]} consensus, (row {r+1})",
                     line=dict(color=ENSEMBLE_COLORS[e1]),
                     marker=dict(color=ENSEMBLE_COLORS[e1]),
                     hovertext=[
@@ -496,7 +503,7 @@ def main():
                 go.Scatter(
                     x=xs, y=pos_cons2[start:end],
                     mode='lines+markers',
-                    name=f"{letter_map[e2]} consensus, (row {r+1})",
+                    name=f"{LETTER_MAP[e2]} consensus, (row {r+1})",
                     line=dict(color=ENSEMBLE_COLORS[e2]),
                     marker=dict(color=ENSEMBLE_COLORS[e2]),
                     hovertext=[
@@ -550,7 +557,7 @@ def main():
                 go.Scatter(
                     x=xs, y=pos_ss1[start:end],
                     mode='lines+markers',
-                    name=f"{letter_map[e1]} unpaired '.' (row {r+1})",
+                    name=f"{LETTER_MAP[e1]} unpaired '.' (row {r+1})",
                     line=dict(color=ENSEMBLE_COLORS[e1]),
                     marker=dict(color=ENSEMBLE_COLORS[e1]),
                     hovertext=[
@@ -571,7 +578,7 @@ def main():
                 go.Scatter(
                     x=xs, y=pos_ss2[start:end],
                     mode='lines+markers',
-                    name=f"{letter_map[e2]} unpaired '.' (row {r+1})",
+                    name=f"{LETTER_MAP[e2]} unpaired '.' (row {r+1})",
                     line=dict(color=ENSEMBLE_COLORS[e2]),
                     marker=dict(color=ENSEMBLE_COLORS[e2]),
                     hovertext=[

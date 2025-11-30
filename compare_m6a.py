@@ -28,30 +28,30 @@ Usage example:
 
 import argparse
 import os
+import shutil
 import sys
 import tempfile
-import shutil
-from pathlib import Path
 from collections import Counter
-from math import ceil
 from datetime import datetime
+from math import ceil
+from pathlib import Path
 
-from ruamel.yaml import YAML
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from ruamel.yaml import YAML
 
 import utils  # wrappers & helpers from your codebase
 
 LETTER_MAP = {
-    'V': 'RNASubopt',      # ViennaRNA ens via RNAsubopt
-    'R': 'RNAStructure',
+    "V": "RNASubopt",  # ViennaRNA ens via RNAsubopt
+    "R": "RNAStructure",
 }
 
 ENSEMBLE_COLORS = {
-    'V': 'red',
-    'R': "#9b99fc",  # a lighter purple
-    'V6': "#f8c9aa",
-    'R6': 'violet'
+    "V": "red",
+    "R": "#9b99fc",  # a lighter purple
+    "V6": "#f8c9aa",
+    "R6": "violet",
 }
 
 # ---------------------------- Helpers ----------------------------
@@ -60,6 +60,14 @@ def load_config(path: str):
     yaml = YAML(typ="safe")
     with open(path) as fh:
         return yaml.load(fh)
+
+
+def apply_environment(cfg: dict):
+    env = cfg.get("environment", {})
+    if env.get("data_tables"):
+        os.environ["DATAPATH"] = os.path.abspath(env["data_tables"])
+    if env.get("threads") is not None:
+        os.environ["OMP_NUM_THREADS"] = str(env["threads"])
 
 def load_sequence(path_or_seq: str) -> str:
     p = Path(path_or_seq)
@@ -159,119 +167,6 @@ def generate_ensemble(letter: str, seq_file: str, out_db: str, ens_n: int, cfg: 
     else:
         raise ValueError(f"Unknown tool letter: {letter}")
 
-def positional_stats_with_freq(structs: list):
-    """
-    For a list of dot–bracket strings, compute per-position:
-      - Shannon entropy (utils.shannon_math, base 2)
-      - Consensus (fraction of most frequent symbol)
-      - Per-symbol frequency dict: {'.': [..], '(': [..], ')': [..]}
-    Returns (entropy_list, consensus_list, freq_dict).
-    """
-    if not structs:
-        return [], [], {'.': [], '(': [], ')': []}
-    L = len(structs[0])
-    ent, cons = [], []
-    freq = {'.': [], '(': [], ')': []}
-    for i in range(L):
-        col = [s[i] for s in structs]
-        ent.append(utils.shannon_math(col, unit="shannon"))
-        c = Counter(col)
-        most, cnt = c.most_common(1)[0]
-        cons.append(cnt / len(col))
-        for sym in ('.','(',')'):
-            freq[sym].append(c.get(sym, 0) / len(col))
-    return ent, cons, freq
-
-def plot_series_over_positions(
-    seq: str,
-    ys_list: list,
-    labels: list,
-    colors: list,
-    freq_list: list,  
-    title: str,
-    y_title: str,
-    out_html: str,
-    mods: list = []
-):
-    """
-    Make a 4-row chunked Plotly line plot across positions, with multiple series.
-    Hover shows: pos, nt, value, and per-symbol frequencies for that series.
-    """
-    L = len(seq)
-    nrows = 4
-    chunk = ceil(L / nrows)
-    min_px_per_base = 10
-    row_width_px = max(chunk * min_px_per_base, 900)
-    mods = mods or []
-
-    fig = make_subplots(
-        rows=nrows, cols=1, shared_xaxes=False,
-        subplot_titles=[
-            f"Positions {r*chunk+1}-{min((r+1)*chunk, L)}"
-            for r in range(nrows)
-        ]
-    )
-
-    for r in range(nrows):
-        start = r * chunk
-        end   = min(start + chunk, L)
-        xs    = list(range(start+1, end+1))
-        for ys, lab, col, fq in zip(ys_list, labels, colors, freq_list):
-            if "m6A" in lab:
-                marker_colors = [
-                    "black" if (i in mods) else col
-                    for i in xs
-                ]
-            else:
-                marker_colors = [col] * len(xs)
-            fig.add_trace(
-                go.Scatter(
-                    x=xs, y=ys[start:end],
-                    mode='lines+markers',
-                    name=f"{lab} (row {r+1})",
-                    line=dict(color=col),
-                    marker=dict(color=marker_colors),
-                    hovertext=[
-                        (
-                            (lambda nt_disp:
-                                f"pos={i}"
-                                f"<br>nt={nt_disp}"
-                                f"<br>val={ys[i-1]:.3f}"
-                                f"<br>(={fq['('][i-1]:.3f} )={fq[')'][i-1]:.3f} .={fq['.'][i-1]:.3f}"
-                            )(
-                                "6" if ("m6A" in lab and i in mods) else seq[i-1]
-                            )
-                        )
-                        for i in xs
-                    ],
-                    hoverinfo="text"
-                ),
-                row=r+1, col=1
-            )
-        fig.update_xaxes(range=[start - 0.5, end + 0.5], row=r+1, col=1)
-
-    if "Consensus" in title or "consensus" in y_title.lower():
-        y_range = [0, 1.05]
-    else:
-        m = max(max(ys) if ys else 0.0 for ys in ys_list)
-        y_range = [0, max(m, 1.0) * 1.05]
-
-    for r in range(nrows):
-        fig.update_yaxes(range=y_range, row=r+1, col=1)
-
-    fig.update_layout(
-        title=title,
-        xaxis_title="Position",
-        yaxis_title=y_title,
-        font_family="Courier New",
-        width=max(row_width_px, 1075),
-        height=max(720, 240 * nrows),
-        margin=dict(l=50, r=30, t=150, b=50),
-        legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
-    )
-    fig.write_html(out_html, auto_open=False)
-    print("Wrote plot:", out_html)
-
 def write_output_summary(out_dir: Path, base: str, want_V: bool, want_R: bool, M: int = 20, sequence: str = "input sequence"):
     """
     Create a short text file summarizing all outputs generated by compare_m6a.py.
@@ -318,6 +213,126 @@ def write_output_summary(out_dir: Path, base: str, want_V: bool, want_R: bool, M
     print(f"Summary file written: {summary_path}")
 
 
+def positional_stats_with_freq(structs: list):
+    """
+    For a list of dot–bracket strings, compute per-position:
+      - Shannon entropy (utils.shannon_math, base 2)
+      - Consensus (fraction of most frequent symbol)
+      - Per-symbol frequency dict: {'.': [..], '(': [..], ')': [..]}
+    Returns (entropy_list, consensus_list, freq_dict).
+    """
+    if not structs:
+        return [], [], {'.': [], '(': [], ')': []}
+    L = len(structs[0])
+    ent, cons = [], []
+    freq = {'.': [], '(': [], ')': []}
+    for i in range(L):
+        col = [s[i] for s in structs]
+        ent.append(utils.shannon_math(col, unit="shannon"))
+        c = Counter(col)
+        most, cnt = c.most_common(1)[0]
+        cons.append(cnt / len(col))
+        for sym in ('.','(',')'):
+            freq[sym].append(c.get(sym, 0) / len(col))
+    return ent, cons, freq
+
+
+def plot_series_over_positions(
+    seq: str,
+    ys_list: list,
+    labels: list,
+    colors: list,
+    freq_list: list,
+    title: str,
+    y_title: str,
+    out_html: str,
+    mods: list = []
+):
+    """
+    Make a 4-row chunked Plotly line plot across positions, with multiple series.
+    Hover shows: pos, nt, value, and per-symbol frequencies for that series.
+    """
+    L = len(seq)
+    nrows = 4
+    chunk = ceil(L / nrows)
+    min_px_per_base = 10
+    row_width_px = max(chunk * min_px_per_base, 900)
+    mods = mods or []
+
+    fig = make_subplots(
+        rows=nrows, cols=1, shared_xaxes=False,
+        subplot_titles=[
+            f"Positions {r*chunk+1}-{min((r+1)*chunk, L)}"
+            for r in range(nrows)
+        ]
+    )
+
+    value_label = "val"
+    low_title = y_title.lower()
+    if "entropy" in low_title:
+        value_label = "ent"
+    elif "consensus" in low_title:
+        value_label = "cons"
+    elif "unpaired" in low_title:
+        value_label = "frac '.'"
+
+    for r in range(nrows):
+        start = r * chunk
+        end   = min(start + chunk, L)
+        xs    = list(range(start+1, end+1))
+        for ys, lab, col, fq in zip(ys_list, labels, colors, freq_list):
+            if "m6A" in lab:
+                marker_colors = [
+                    "black" if (i in mods) else col
+                    for i in xs
+                ]
+            else:
+                marker_colors = [col] * len(xs)
+            fig.add_trace(
+                go.Scatter(
+                    x=xs, y=ys[start:end],
+                    mode='lines+markers',
+                    name=f"{lab} (row {r+1})",
+                    line=dict(color=col),
+                    marker=dict(color=marker_colors),
+                    hovertext=[
+                        (
+                            f"pos={i:02d}"
+                            f"<br>nt={'6' if ('m6A' in lab and i in mods) else seq[i-1]}"
+                            f"<br>{value_label}={ys[i-1]:.3f}"
+                            f"<br>(={fq['('][i-1]:.3f} )={fq[')'][i-1]:.3f} .={fq['.'][i-1]:.3f}"
+                        )
+                        for i in xs
+                    ],
+                    hoverinfo="text"
+                ),
+                row=r+1, col=1
+            )
+        fig.update_xaxes(range=[start - 0.5, end + 0.5], row=r+1, col=1)
+
+    if "Consensus" in title or "consensus" in y_title.lower():
+        y_range = [0, 1.05]
+    else:
+        m = max(max(ys) if ys else 0.0 for ys in ys_list)
+        y_range = [0, max(m, 1.0) * 1.05]
+
+    for r in range(nrows):
+        fig.update_yaxes(range=y_range, row=r+1, col=1)
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Position",
+        yaxis_title=y_title,
+        font_family="Courier New",
+        width=max(row_width_px, 1000),
+        height=max(700, 235 * nrows),
+        margin=dict(l=60, r=20, t=150, b=50),
+        legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="left", x=0)
+    )
+    fig.write_html(out_html, auto_open=False)
+    print("Wrote plot:", out_html)
+
+
 # ---------------------------- Main ----------------------------
 
 def main():
@@ -333,11 +348,7 @@ def main():
     args = p.parse_args()
 
     CFG = load_config(args.config)
-    env = CFG.get("environment", {})
-    if env.get("data_tables"):
-        os.environ["DATAPATH"] = os.path.abspath(env["data_tables"])
-    if env.get("threads") is not None:
-        os.environ["OMP_NUM_THREADS"] = str(env["threads"])
+    apply_environment(CFG)
 
     seq_no_mod  = load_sequence(args.sequence)
     mods    = read_positions(args.mods)

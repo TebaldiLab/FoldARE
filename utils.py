@@ -1,81 +1,151 @@
+import math
 import os
 import sys
-import math
 from collections import Counter
+from typing import Callable, Dict
 
-def ct2dot(ct_file, db_file, st_num=0, ct2dot_folder="dot2ct"):
-    """Converts dot-bracket notation to CT format using RNAStrucute tool."""
+
+# -----------------------------------------------------------------------------
+# External tool wrappers
+# -----------------------------------------------------------------------------
+def ct2dot(ct_file: str, db_file: str, st_num: int = 0, ct2dot_folder: str = "dot2ct") -> None:
+    """Convert CT to dot-bracket using RNAstructure's dot2ct helper."""
     command = f"{ct2dot_folder} {ct_file} {st_num} {db_file}"
     print("Running:", command)
     os.system(command)
 
-def RNAStructure(seq_file, out_file, m6A=False, maxm=20, executable="/path/to/RNAStructure/fold-smp", coinput_file=None):
+
+def RNAStructure(  # noqa: N802 - keep historical name
+    seq_file: str,
+    out_file: str,
+    m6A: bool = False,
+    maxm: int = 20,
+    executable: str = "/path/to/RNAStructure/fold-smp",
+    coinput_file: str | None = None,
+) -> None:
     """
-    Runs RNAstructure.
-    If coinput_file is provided, the command adds the '--SHAPE <coinput_file>' option.
+    Run RNAstructure.
+
+    If coinput_file is provided, adds '--SHAPE <coinput_file>'.
     """
     if coinput_file:
-        command = (f"{executable} {seq_file} {out_file} -k {'-a m6A' if m6A else ''} -m {maxm} "
-                   f"--SHAPE {coinput_file}")
+        command = (
+            f"{executable} {seq_file} {out_file} -k {'-a m6A' if m6A else ''} -m {maxm} "
+            f"--SHAPE {coinput_file}"
+        )
     else:
         command = f"{executable} {seq_file} {out_file} -k {'-a m6A' if m6A else ''} -m {maxm}"
     print("Running RNAstructure command:", command)
     os.system(command)
 
-def RNAFold(seq_file, out_file, max_bp_span=600, executable="RNAfold", method="mfe", m6A=False, coinput_file=None):
+
+def RNAFold(  # noqa: N802 - keep historical name
+    seq_file: str,
+    out_file: str,
+    max_bp_span: int = 600,
+    executable: str = "RNAfold",
+    method: str = "mfe",
+    m6A: bool = False,
+    coinput_file: str | None = None,
+) -> None:
     """
-    Runs RNAfold.
-    If coinput_file is provided, the command adds the '--shape <coinput_file>' option.
+    Run RNAfold.
+
+    If coinput_file is provided, adds '--shape <coinput_file>'.
     """
     if coinput_file:
-        command = (f"{executable}{' -m6' if m6A else ''}{' -p' if method == 'p' else ''} --noPS {'--noDP' if method == 'p' else ''} --maxBPspan={max_bp_span} "
-                   f"--shape {coinput_file} {seq_file} > {out_file}")
+        command = (
+            f"{executable}{' -m6' if m6A else ''}{' -p' if method == 'p' else ''} "
+            f"--noPS {'--noDP' if method == 'p' else ''} --maxBPspan={max_bp_span} "
+            f"--shape {coinput_file} {seq_file} > {out_file}"
+        )
     else:
-        command = f"{executable}{' -m6' if m6A else ''}{' -p' if method == 'p' else ''} --noPS {'--noDP' if method == 'p' else ''} --maxBPspan={max_bp_span} {seq_file} > {out_file}"
+        command = (
+            f"{executable}{' -m6' if m6A else ''}{' -p' if method == 'p' else ''} "
+            f"--noPS {'--noDP' if method == 'p' else ''} --maxBPspan={max_bp_span} "
+            f"{seq_file} > {out_file}"
+        )
     print("Running RNAfold command:", command)
     os.system(command)
 
-def RNASubopt(seq_file, out_file, n_struc=20, method='z', m6A=False, executable="RNAsubopt", coinput_file=None):
+
+def RNASubopt(  # noqa: N802 - keep historical name
+    seq_file: str,
+    out_file: str,
+    n_struc: int = 20,
+    method: str = "z",
+    m6A: bool = False,
+    executable: str = "RNAsubopt",
+    coinput_file: str | None = None,
+) -> None:
+    """Run RNAsubopt; supports SHAPE input, m6A flag, and 'p'/'z' methods."""
+    method_flag = " -p" if method == "p" else " -z"
+    m6_flag = " -m6" if m6A else ""
+    n_arg = f"{n_struc if method == 'p' else ''}"
     if coinput_file:
-        command = (f"{executable}{' -m6' if m6A else ''}{' -p' if method == 'p' else ' -z'} {n_struc if method == 'p' else ''} -s < {seq_file} > {out_file} 2>/dev/null")
+        command = (
+            f"{executable}{m6_flag}{method_flag} {n_arg} -s < {seq_file} > {out_file} 2>/dev/null"
+        )
     else:
-        command = f"{executable}{' -m6' if m6A else ''}{' -p' if method == 'p' else ' -z'} {n_struc if method == 'p' else ''} -s < {seq_file} > {out_file} 2>/dev/null"
+        command = (
+            f"{executable}{m6_flag}{method_flag} {n_arg} -s < {seq_file} > {out_file} 2>/dev/null"
+        )
     print("Running RNAsubopt command:", command)
     os.system(command)
 
-def EternaFold(seq_file, out_file, mode="predict", executable="./../EternaFold-master/src/contrafold", eternaFold_params="../EternaFold-master/parameters/EternaFoldParams.v1", eternaFold_params_shape="../EternaFold-master/parameters/EternaFoldParams_PLUS_POTENTIALS.v1", nsamples=20):
+
+def EternaFold(  # noqa: N802 - keep historical name
+    seq_file: str,
+    out_file: str,
+    mode: str = "predict",
+    executable: str = "./../EternaFold-master/src/contrafold",
+    eternaFold_params: str = "../EternaFold-master/parameters/EternaFoldParams.v1",
+    eternaFold_params_shape: str = "../EternaFold-master/parameters/EternaFoldParams_PLUS_POTENTIALS.v1",
+    nsamples: int = 20,
+) -> None:
     """
-    Runs EnernaFold using contrafold.
-    In ensemble mode (mode="sample"), it runs:
-      contrafold_run sample <seq_file> --params <enernaFold_params> --nsamples <nsamples> > <out_file>
-    In predictor mode (mode="predict"), it runs:
-      contrafold_run predict <seq_file> --params <enernaFold_params> > <out_file>
+    Run EternaFold via contrafold.
+
+    mode="sample": contrafold sample ... --nsamples <nsamples>
+    mode="predict": contrafold predict ... --evidence --numdatasources 1 --kappa 0.1
     """
     if mode == "sample":
-        command = (f"{executable} sample {seq_file} --params {eternaFold_params} "
-                   f"--nsamples {nsamples} > {out_file}")
+        command = (
+            f"{executable} sample {seq_file} --params {eternaFold_params} "
+            f"--nsamples {nsamples} > {out_file}"
+        )
     else:
-        command = f"{executable} predict {seq_file} --evidence --numdatasources 1 --kappa 0.1 --params {eternaFold_params_shape} > {out_file}"
+        command = (
+            f"{executable} predict {seq_file} --evidence --numdatasources 1 --kappa 0.1 "
+            f"--params {eternaFold_params_shape} > {out_file}"
+        )
     print("Running EnernaFold command:", command)
     os.system(command)
 
-#./src/contrafold predict test_SHAPE.bpseq --evidence --numdatasources 1 --kappa 0.1 --params parameters/EternaFoldParams_PLUS_POTENTIALS.v1 
-def LinearFold(seq_file, out_file, mode="predict", executable="./../LinearFold-master/linearfold", 
-               coinput_file=None, delta=2.0):
+
+def LinearFold(  # noqa: N802 - keep historical name
+    seq_file: str,
+    out_file: str,
+    mode: str = "predict",
+    executable: str = "./../LinearFold-master/linearfold",
+    coinput_file: str | None = None,
+    delta: float = 2.0,
+) -> None:
     """
-    Runs LinearFold.
-    In ensemble mode (mode="ensemble"), the command uses:
-      cat <seq_file> | <executable> -V --zuker --delta 2.0 [--shape <coinput_file>] > <out_file>
-    In predictor mode (mode="predict"), the command uses:
-      cat <seq_file> | <executable> [ -V --shape <coinput_file> ] > <out_file>
+    Run LinearFold.
+
+    mode="ensemble": cat <seq_file> | <executable> --zuker --delta <delta> [--shape ...]
+    mode="predict" : cat <seq_file> | <executable> [-V --shape ...]
     """
     if mode == "ensemble":
         if coinput_file:
-            command = (f"cat {seq_file} | {executable} --shape {coinput_file} "
-                       f"--zuker --delta {delta} > {out_file}")
+            command = (
+                f"cat {seq_file} | {executable} --shape {coinput_file} "
+                f"--zuker --delta {delta} > {out_file}"
+            )
         else:
             command = f"cat {seq_file} | {executable} --zuker --delta {delta} > {out_file}"
-    else:  # predictor mode
+    else:
         if coinput_file:
             command = f"cat {seq_file} | {executable} -V --shape {coinput_file} > {out_file}"
         else:
@@ -83,34 +153,27 @@ def LinearFold(seq_file, out_file, mode="predict", executable="./../LinearFold-m
     print("Running LinearFold command:", command)
     os.system(command)
 
+# -----------------------------------------------------------------------------
+# File processing functions
+# -----------------------------------------------------------------------------
 
 def clean_ensemble_file(input_file, output_file):
     """
     Process an ensemble DB file so that only dot-bracket notations remain.
-    Lines starting with '>' or containing any alphabetical characters (e.g. sequence letters)
-    are omitted from the output.
-
-    :param input_file: Path to the original ensemble DB file.
-    :param output_file: Path to write the cleaned file.
+    Lines starting with '>' or containing alphabetic characters are omitted.
     """
-    # Define the set of allowed characters for dot-bracket notation.
-    allowed_chars = set(".()<>{}[]")
-    
-    with open(input_file, 'r') as inf, open(output_file, 'w') as outf:
+    with open(input_file, "r") as inf, open(output_file, "w") as outf:
         for line in inf.readlines():
             line = line.strip()
             line = line.split()[0]  # remove energy values
-            # Skip empty lines
             if not line:
                 continue
-            # Skip lines starting with '>' (titles) or that contain alphabetic characters.
-            if line.startswith('>') or any(ch.isalpha() for ch in line):
+            if line.startswith(">") or any(ch.isalpha() for ch in line):
                 continue
-            # Optionally, ensure that the line consists solely of allowed characters.
-            #if set(line).issubset(allowed_chars):
             outf.write(line + "\n")
 
-def extract_ensemble(file):
+
+def extract_ensemble(file: str) -> list[str]:
     """
     Extract the ensemble from a DB file as a list of dot–bracket strings.
     Only lines that do NOT start with '>' or a letter are retained.
@@ -127,25 +190,34 @@ def extract_ensemble(file):
             ensemble.append(line)
     return ensemble
 
-def count_dots(ens):
+
+def count_dots(ens: list[str]) -> list[float]:
     """
-    For a list of dot–bracket strings (ensemble), count for each column 
+    For a list of dot–bracket strings (ensemble), count for each column
     the fraction of sequences that have a dot '.'.
     Returns a list of probabilities.
     """
-    dots = []
-    # assume all ensemble strings are of the same length
+    if not ens:
+        return []
+    dots: list[float] = []
     for i in range(len(ens[0])):
         dot_count = sum(1 for seq in ens if seq[i] == ".")
         dots.append(dot_count / len(ens))
     return dots
 
-def create_shape_file(ensemble_file, shape_file_out, thresholds, coefficients, linearfold_style=False):
+
+def create_shape_file(
+    ensemble_file: str,
+    shape_file_out: str,
+    thresholds: Dict[str, float],
+    coefficients: Dict[str, float],
+    linearfold_style: bool = False,
+) -> None:
     """
     Create a shape file from the ensemble DB file using configurable thresholds and coefficients.
     The shape file contains one line per column in the format:
       <position> <reactivity>
-    
+
     Reactivity is determined by applying the following conditions:
       - If thresholds["high"] > probability > thresholds["medium"], multiply by coefficients["medium"].
       - If probability >= thresholds["high"], multiply by coefficients["high"].
@@ -161,13 +233,13 @@ def create_shape_file(ensemble_file, shape_file_out, thresholds, coefficients, l
     ensemble = extract_ensemble(ensemble_file)
     if not ensemble:
         sys.exit(f"Error: No valid ensemble sequences found in {ensemble_file}.")
-    
+
     dots = count_dots(ensemble)
     shape_lines = ""
-    
+
     for i, prob in enumerate(dots):
         pos = i + 1  # positions are 1-indexed
-        
+
         if thresholds["high"] > prob > thresholds["medium"]:
             value = prob * coefficients["medium"]
         elif prob >= thresholds["high"]:
@@ -182,16 +254,16 @@ def create_shape_file(ensemble_file, shape_file_out, thresholds, coefficients, l
                 value = "NA"
             else:
                 continue  # skip zero values
-        
+
         shape_lines += f"{pos} {value}\n"
-    
-    with open(shape_file_out, 'w') as f:
+
+    with open(shape_file_out, "w") as f:
         f.write(shape_lines)
-    
+
     print("Shape file created:", shape_file_out)
 
 
-def convert_shape_to_bpseq(shape_file, bpseq_file, seq_file):
+def convert_shape_to_bpseq(shape_file: str, bpseq_file: str, seq_file: str) -> None:
     """
     Converts a (possibly sparse) .shape file to a .bpseq file.
 
@@ -202,9 +274,8 @@ def convert_shape_to_bpseq(shape_file, bpseq_file, seq_file):
     Output .bpseq columns:
         <position> <nucleotide> e1 <reactivity_in_scientific_notation>
     """
-    # Read nucleotide sequence from the sequence file (FASTA allowed)
     seq_lines = []
-    with open(seq_file, 'r') as f:
+    with open(seq_file, "r") as f:
         for line in f:
             line = line.strip()
             if line.startswith(">"):
@@ -213,11 +284,9 @@ def convert_shape_to_bpseq(shape_file, bpseq_file, seq_file):
     sequence = "".join(seq_lines)
     L = len(sequence)
 
-    # Prepare zero-filled vector
     shape_values = [-1.00E+00] * L
 
-    # Read SHAPE lines: allow sparse input with explicit positions
-    with open(shape_file, 'r') as f:
+    with open(shape_file, "r") as f:
         for line in f:
             s = line.strip()
             if not s:
@@ -238,8 +307,7 @@ def convert_shape_to_bpseq(shape_file, bpseq_file, seq_file):
                 # (old dense format without positions is discouraged now)
                 continue
 
-    # Write BPSEQ
-    with open(bpseq_file, 'w') as out:
+    with open(bpseq_file, "w") as out:
         for i, reactivity in enumerate(shape_values, start=1):
             nt = sequence[i - 1]
             formatted_reactivity = "{:.2E}".format(reactivity)
@@ -247,132 +315,118 @@ def convert_shape_to_bpseq(shape_file, bpseq_file, seq_file):
 
     print(f"Converted (sparse-aware) {shape_file} to {bpseq_file}.")
 
+# -----------------------------------------------------------------------------
+# Structure comparison functions
+# -----------------------------------------------------------------------------
 
-
-def parse_dot_bracket(dot_bracket):
+def parse_dot_bracket(dot_bracket: str) -> list[int]:
     """
     Parses dot-bracket notation and returns a list where index i corresponds to the partner of nucleotide i.
     If unpaired, partner[i] = -1.
     """
     stack = []
     partner = [-1] * len(dot_bracket)
-    pair_dict = {'(':')', '[':']', '{':'}', '<':'>'}
+    pair_dict = {"(": ")", "[": "]", "{": "}", "<": ">"}
     opening_brackets = pair_dict.keys()
     closing_brackets = pair_dict.values()
     bracket_pairs = {v: k for k, v in pair_dict.items()}
-    
+
     for i, char in enumerate(dot_bracket):
         if char in opening_brackets:
             stack.append((char, i))
         elif char in closing_brackets:
             if stack and stack[-1][0] == bracket_pairs[char]:
-                opening_char, j = stack.pop()
+                _, j = stack.pop()
                 partner[i] = j
                 partner[j] = i
             else:
-                pass
-                #print(f"Warning: Unmatched closing bracket '{char}' at position {i}")
-        else:
-            # Unpaired nucleotide ('.' or other characters)
-            continue
-    if stack:
-        pass
-        #print("Warning: Unmatched opening brackets remain in the structure.")
+                continue
     return partner
 
-def parse_dot_bracket_agnostic(dot_bracket):
+
+def parse_dot_bracket_agnostic(dot_bracket: str) -> list[int]:
     """
     Parses dot-bracket notation and returns a list where index i corresponds to the partner of nucleotide i.
     If unpaired, partner[i] = -1.
     """
     stack = []
     partner = [-1] * len(dot_bracket)
-    pair_dict = {'(':')', '[':']', '{':'}', '<':'>'}
+    pair_dict = {"(": ")", "[": "]", "{": "}", "<": ">"}
     opening_brackets = pair_dict.keys()
     closing_brackets = pair_dict.values()
     bracket_pairs = {v: k for k, v in pair_dict.items()}
-    
+
     for i, char in enumerate(dot_bracket):
         if char in opening_brackets:
             stack.append((char, i))
         elif char in closing_brackets:
             if stack and stack[-1][0] in opening_brackets:
-                opening_char, j = stack.pop()
+                _, j = stack.pop()
                 partner[i] = j
                 partner[j] = i
             else:
-                pass
-                #print(f"Warning: Unmatched closing bracket '{char}' at position {i}")
-        else:
-            # Unpaired nucleotide ('.' or other characters)
-            continue
-    if stack:
-        pass
-        #print("Warning: Unmatched opening brackets remain in the structure.")
+                continue
     return partner
 
 
-def total_difference(structure1, structure2):
+def total_difference(structure1: str, structure2: str) -> int:
     """
     Calculates the total number of positions where the pairing status differs between two structures.
     This includes both paired and unpaired nucleotides.
     """
     partner1 = parse_dot_bracket(structure1)
     partner2 = parse_dot_bracket(structure2)
-    
-    # Ensure both partner lists are the same length
+
     min_length = min(len(partner1), len(partner2))
     max_length = max(len(partner1), len(partner2))
-    
-    # Count differences in the overlapping region
+
     difference = sum(1 for i in range(min_length) if partner1[i] != partner2[i])
-    
-    # Account for any extra nucleotides in the longer structure
     difference += max_length - min_length
-    
     return difference
 
-def similarity_score(structure1, structure2):
+
+def similarity_score(structure1: str, structure2: str) -> float:
     partner1 = parse_dot_bracket(structure1)
     partner2 = parse_dot_bracket(structure2)
-    
+
     min_length = min(len(partner1), len(partner2))
     max_length = max(len(partner1), len(partner2))
-    
+
     total_positions = max_length
     difference = sum(1 for i in range(min_length) if partner1[i] != partner2[i])
     difference += max_length - min_length  # Account for length differences
-    
+
     similarity = 1 - (difference / total_positions)
     return similarity
 
-def similarity_score_agnostic(structure1, structure2):
+
+def similarity_score_agnostic(structure1: str, structure2: str) -> float:
     partner1 = parse_dot_bracket_agnostic(structure1)
     partner2 = parse_dot_bracket_agnostic(structure2)
-    
+
     min_length = min(len(partner1), len(partner2))
     max_length = max(len(partner1), len(partner2))
-    
+
     total_positions = max_length
     difference = sum(1 for i in range(min_length) if partner1[i] != partner2[i])
     difference += max_length - min_length  # Account for length differences
-    
+
     similarity = 1 - (difference / total_positions)
     return similarity
 
 
-def identity_score(struct1, struct2):
+def identity_score(struct1: str, struct2: str) -> float:
     """
     Compute a simple similarity score between two RNA structure strings.
-    
+
     For each position:
       - If the characters are exactly the same, count 1.
       - Otherwise, if both characters are opening brackets (any of "({[<"), count as a match.
       - Otherwise, if both are closing brackets (any of ")}]>"), count as a match.
       - Else, count 0.
-    
+
     The final score is the fraction of positions that match, rounded to two decimals.
-    
+
     :param struct1: First structure string (e.g., "((..))")
     :param struct2: Second structure string (e.g., "{[..]}")
     :return: Similarity score as a float (e.g., 0.90 for 90% matching)
@@ -380,21 +434,20 @@ def identity_score(struct1, struct2):
     """
     if len(struct1) != len(struct2):
         raise ValueError("The two structures must have the same length.")
-    
+
     match_count = 0
     for a, b in zip(struct1, struct2):
         if a == b:
             match_count += 1
-        # else, no match at this position
-    
+
     score = match_count / len(struct1)
     return round(score, 5)
 
 
-def semi_identity_score(struct1, struct2):
+def semi_identity_score(struct1: str, struct2: str) -> float:
     """
     Compute Score B ("semi-identity") between two RNA structures.
-    
+
     For each position i:
       - If the 3-nt window (i-1, i, i+1) is identical in both structures → +1
       - Else, if only the i-th position is identical → +0.5
@@ -413,11 +466,10 @@ def semi_identity_score(struct1, struct2):
     score = 0.0
 
     for i in range(n):
-        # define 3-nt window boundaries
-        left  = i - 1 if i > 0 else i
+        left = i - 1 if i > 0 else i
         right = i + 1 if i < n - 1 else i
 
-        if struct1[left:right+1] == struct2[left:right+1]:
+        if struct1[left : right + 1] == struct2[left : right + 1]:
             score += 1.0
         elif struct1[i] == struct2[i]:
             score += 0.5
@@ -425,7 +477,7 @@ def semi_identity_score(struct1, struct2):
     return round(score / n, 5)
 
 
-def get_similarity_func(method: str):
+def get_similarity_func(method: str) -> Callable[[str, str], float]:
     """
     Return the similarity scoring function by name.
     method: "identity" for identity (Score A), "semi-identity" for semi-identity (Score B)
@@ -440,11 +492,11 @@ def get_similarity_func(method: str):
 
 def shannon_math(data, unit):
     """
-    Compute Shannon entropy (no scipy). 
+    Compute Shannon entropy (no scipy).
     data: list of symbols.
     unit: 'shannon', 'natural', or 'hartley'.
     """
-    base = {'shannon': 2., 'natural': math.e, 'hartley': 10.}
+    base = {"shannon": 2.0, "natural": math.e, "hartley": 10.0}
     if unit not in base:
         raise ValueError(f"Unknown entropy unit '{unit}'")
     if len(data) <= 1:

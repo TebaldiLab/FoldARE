@@ -22,37 +22,39 @@ aggregate each structure’s total score, rank them, and report:
       -c config.yaml \
 """
 import argparse
-import os
-import tempfile
-import shutil
-from pathlib import Path
-from ruamel.yaml import YAML
 import math
+import os
+import shutil
+import tempfile
 from collections import Counter
-import utils
-import plotly.graph_objects as go
-from math import ceil
 from datetime import datetime
+from math import ceil
+from pathlib import Path
+
+import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from ruamel.yaml import YAML
+
+import utils
 
 # ─── Letter‐to‐tool & colors ───────────────────────────────────────────────────
 LETTER_MAP = {
-    'E': "EternaFold",
-    'V': "RNASubopt",
-    'R': "RNAStructure",
-    'L': "LinearFold",
+    "E": "EternaFold",
+    "V": "RNASubopt",
+    "R": "RNAStructure",
+    "L": "LinearFold",
 }
 
 ENSEMBLE_COLORS = {
-    'E': 'brown',
-    'V': 'red',
-    'R': '#9b99fc',  # a lighter purple
-    'L': 'green',
+    "E": "brown",
+    "V": "red",
+    "R": "#9b99fc",  # a lighter purple
+    "L": "green",
 }
 
 # ─── Shannon entropy helper ────────────────────────────────────────────────────
 def shannon_math(data, unit="shannon"):
-    base = {'shannon': 2.0, 'natural': math.e, 'hartley': 10.0}
+    base = {"shannon": 2.0, "natural": math.e, "hartley": 10.0}
     if len(data) <= 1:
         return 0.0
     counts = Counter(data)
@@ -67,6 +69,15 @@ def shannon_math(data, unit="shannon"):
 def load_config(path):
     yaml = YAML(typ="safe")
     return yaml.load(Path(path).read_text())
+
+
+def apply_environment(cfg: dict):
+    env = cfg.get("environment", {})
+    if env.get("data_tables"):
+        os.environ["DATAPATH"] = str(Path(env["data_tables"]).absolute())
+    if env.get("threads") is not None:
+        os.environ["OMP_NUM_THREADS"] = str(env["threads"])
+
 
 def load_sequence(path_or_seq):
     p = Path(path_or_seq)
@@ -84,9 +95,9 @@ def load_sequence(path_or_seq):
 def generate_ensemble(letter, seq, out_db, M, cfg):
     tool = LETTER_MAP[letter]
     tool_cfg = cfg[tool]
-    exe      = tool_cfg['executable']
-    params   = tool_cfg.get('params', {})
-    tmp_db   = out_db + ".tmp"
+    exe = tool_cfg["executable"]
+    params = tool_cfg.get("params", {})
+    tmp_db = out_db + ".tmp"
 
     # call the appropriate wrapper
     if letter == 'V':
@@ -187,28 +198,20 @@ def write_output_summary_compare_all(
 # ─── main ─────────────────────────────────────────────────────────────────────
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("-s","--sequence", required=True,
-                   help="FASTA path or raw sequence")
-    p.add_argument("-n","--ens_n", type=int,
-                   help="Number of structures per ensemble (default from config)")
-    p.add_argument("--top_n", type=int,
-                   help="Number of top structures to output and analyze")
-    p.add_argument("-o", "--output_folder", default="compare_all_results",
-                   help="Output folder")
-    p.add_argument("-c","--config", default="config.yaml",
-                   help="YAML configuration file")
+    p.add_argument("-s", "--sequence", required=True, help="FASTA path or raw sequence")
+    p.add_argument(
+        "-n", "--ens_n", type=int, help="Number of structures per ensemble (default from config)"
+    )
+    p.add_argument("--top_n", type=int, help="Number of top structures to output and analyze")
+    p.add_argument("-o", "--output_folder", default="compare_all_results", help="Output folder")
+    p.add_argument("-c", "--config", default="config.yaml", help="YAML configuration file")
     args = p.parse_args()
 
-   
     Path(args.output_folder).mkdir(parents=True, exist_ok=True)
 
     # load config & env
     cfg = load_config(args.config)
-    env = cfg.get("environment", {})
-    if env.get("data_tables"):
-        os.environ["DATAPATH"] = str(Path(env["data_tables"]).absolute())
-    if env.get("threads") is not None:
-        os.environ["OMP_NUM_THREADS"] = str(env["threads"])
+    apply_environment(cfg)
 
     seq = load_sequence(args.sequence)
 
@@ -217,22 +220,22 @@ def main():
 
     base = Path(args.sequence).stem
 
-    M   = args.ens_n if args.ens_n is not None else cfg.get("global_ensemble_size", 20)
+    M = args.ens_n if args.ens_n is not None else cfg.get("global_ensemble_size", 20)
     top_n = args.top_n
 
     # generate ensembles E,V,R,L
     tmpdir = Path(tempfile.mkdtemp(prefix="cmpall_"))
     try:
         all_structs = []  # list of dicts: {id, letter, index, struct}
-        for L in ['E','V','R','L']:
+        for L in ["E", "V", "R", "L"]:
             out_db = str(tmpdir / f"{L}.db")
             members = generate_ensemble(L, args.sequence, out_db, M, cfg)
             for idx, s in enumerate(members, start=1):
                 all_structs.append({
-                    'id': f"{L}{idx}",
-                    'letter': L,
-                    'index': idx,
-                    'struct': s
+                    "id": f"{L}{idx}",
+                    "letter": L,
+                    "index": idx,
+                    "struct": s,
                 })
 
         N = len(all_structs)
@@ -259,8 +262,11 @@ def main():
         with open(full_csv, 'w') as fh:
             fh.write("id,method,index,structure,agg_score\n")
             for e in ranked:
-                fh.write(f"{e['id'][0] + '0' + e['id'][1:] if int(e['id'][1:]) < 10 else e['id']}, {e['letter']},{'0' + str(e['index']) if e['index'] < 10 else e['index']},"
-                         f"{e['struct']},{agg[e['id']]:.5f}\n")
+                fh.write(
+                    f"{e['id'][0] + '0' + e['id'][1:] if int(e['id'][1:]) < 10 else e['id']}, {e['letter']},"
+                    f"{'0' + str(e['index']) if e['index'] < 10 else e['index']},"
+                    f"{e['struct']},{agg[e['id']]:.5f}\n"
+                )
         print("Wrote full ranking to", full_csv)
 
         # if top_n, write top structures CSV
@@ -272,7 +278,7 @@ def main():
                 si = ranked[i]['struct']
                 idi= ranked[i]['id']
                 for j in range(top_n):
-                    if i == j: 
+                    if i == j:
                         continue
                     sj = ranked[j]['struct']
                     score = similarity_func(si, sj)
@@ -281,8 +287,11 @@ def main():
             with open(top_csv, 'w') as fh:
                 fh.write("id,method,index,structure,agg_score,top-n_agg_score\n")
                 for e in ranked[:top_n]:
-                    fh.write(f"{e['id'][0] + '0' + e['id'][1:] if int(e['id'][1:]) < 10 else e['id']}, {e['letter']},{'0' + str(e['index']) if e['index'] < 10 else e['index']},"
-                         f"{e['struct']},{agg[e['id']]:.5f},{top_n_agg[e['id']]:.5f}\n")
+                    fh.write(
+                        f"{e['id'][0] + '0' + e['id'][1:] if int(e['id'][1:]) < 10 else e['id']}, {e['letter']},"
+                        f"{'0' + str(e['index']) if e['index'] < 10 else e['index']},"
+                        f"{e['struct']},{agg[e['id']]:.5f},{top_n_agg[e['id']]:.5f}\n"
+                    )
             print(f"Wrote top {top_n} to", top_csv)
 
         # positional consensus & entropy across top_n
@@ -339,9 +348,10 @@ def main():
 
             fig_cons.add_trace(
                 go.Scatter(
-                    x=xs, y=cons_scores_all[start:end],
-                    mode='lines+markers',
-                    name=f'Consensus (row {r+1})',
+                    x=xs,
+                    y=cons_scores_all[start:end],
+                    mode="lines+markers",
+                    name=f"Consensus (row {r+1})",
                     hovertext=[
                         (
                             f"pos={'0' + str(i) if i < 10 else i}"
@@ -352,10 +362,11 @@ def main():
                         for i in xs
                     ],
                     hoverlabel=dict(font=dict(family="Courier New", size=14)),
-                    line=dict(color='green'),
-                    marker=dict(color='green')
+                    line=dict(color="green"),
+                    marker=dict(color="green"),
                 ),
-                row=r+1, col=1
+                row=r + 1,
+                col=1,
             )
             fig_cons.update_xaxes(range=[start - 0.5, end + 0.5], row=r + 1, col=1)
             fig_cons.update_yaxes(range=[0, 1.05], row=r + 1, col=1)
@@ -392,9 +403,10 @@ def main():
 
             fig_ent.add_trace(
                 go.Scatter(
-                    x=xs, y=entp_all[start:end],
-                    mode='lines+markers',
-                    name=f'Entropy (row {r+1})',
+                    x=xs,
+                    y=entp_all[start:end],
+                    mode="lines+markers",
+                    name=f"Entropy (row {r+1})",
                     hovertext=[
                         (
                             f"pos={'0' + str(i) if i < 10 else i}"
@@ -405,10 +417,11 @@ def main():
                         for i in xs
                     ],
                     hoverlabel=dict(font=dict(family="Courier New", size=14)),
-                    line=dict(color='brown'),
-                    marker=dict(color='brown')
+                    line=dict(color="brown"),
+                    marker=dict(color="brown"),
                 ),
-                row=r+1, col=1
+                row=r + 1,
+                col=1,
             )
             fig_ent.update_xaxes(range=[start - 0.5, end + 0.5], row=r + 1, col=1)
 
@@ -446,11 +459,12 @@ def main():
 
             fig_ss.add_trace(
                 go.Scatter(
-                    x=xs, y=pos_ss_all[start:end],
-                    mode='lines+markers',
+                    x=xs,
+                    y=pos_ss_all[start:end],
+                    mode="lines+markers",
                     name=f"Fraction '.' (row {r+1})",
-                    line=dict(color='blue'),
-                    marker=dict(color='blue'),
+                    line=dict(color="blue"),
+                    marker=dict(color="blue"),
                     hovertext=[
                         (
                             f"pos={'0' + str(i) if i < 10 else i}"
@@ -462,7 +476,8 @@ def main():
                     ],
                     hoverlabel=dict(font=dict(family="Courier New", size=14)),
                 ),
-                row=r+1, col=1
+                row=r + 1,
+                col=1,
             )
 
             fig_ss.update_xaxes(range=[start - 0.5, end + 0.5], row=r + 1, col=1)
