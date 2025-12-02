@@ -110,6 +110,9 @@ optional arguments:
 example:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> python compare_m6a.py -s test.fasta -m mods.txt -n 50 --tool R </pre>
 
+## Example sequence with m6a modifications
+In the `example/` folder are:
+1. .fasta file with the RNA sequnce 
+2. .txt file with the corresponding m6a modifications' positions for the sequence.
 
-
-
+This system is included in the repository as the instrument to validate the functionality of FoldARE upon installation.
