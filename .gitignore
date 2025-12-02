@@ -67,3 +67,8 @@ __pycache__
 # temporary scripts #
 #####################
 benchmark*.py
+
+# include examples #
+######################
+!example/*.fasta
+!example/*.txt
