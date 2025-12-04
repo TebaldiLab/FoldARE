@@ -70,7 +70,7 @@ arguments:
 optional arguments:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
     -n: ensemble size (set the size of ensemble)
-    --top_n: number of top models (for each method) to be considered for the aggregate scoring
+    --top_n: number of top-scoring models considered for aggregate scoring 
 </pre>
 example:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">python compare_all.py -s test.fasta -n 50 --top_n 10 </pre>
@@ -89,7 +89,7 @@ arguments:
 optional arguments:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
    -n: ensemble size (set the size of ensemble)
-   --top_n: number of top models (for each method) to be considered for the aggregate scoring
+   --top_n: number of top-scoring models to compare (top_n consensus structures are saved in output)
 </pre>
 example:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> python compare_pair.py -s test.fasta -e1 L -e2 E -n 50 --top_n 10 </pre>
