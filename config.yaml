@@ -1,21 +1,18 @@
 # config.yaml
-# introduce V6 and R6 functions
 
 environment:   
-  data_tables: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/data_tables/"  # Path to data tables
+  data_tables: "../RNAstructure/data_tables/"  # Path to data tables
   threads: 6  # Number of threads to use for parallel processing
 
-global_ensemble_size: 75 # Global ensemble size for all ensemble generation algorithms
+global_ensemble_size: 20 # Global ensemble size for all ensemble generation algorithms
 
-scoring:
-  method: "identity" # Options: "identity" and "semi-identity"
 
 RNAStructure:
   # Path to the RNAstructure "fold" executable 
-  executable: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/exe/Fold-smp"
+  executable: "../RNAstructure/exe/Fold-smp"
   params:
-    m6A: False # Whether to consider m6A modifications, default is False
-    maxm: 75 # Maximum number of structures to generate in ensemble mode
+    a: "m6A"
+    maxm: 75
 
 RNAFold:
   # For RNAFold, we assume the command is available in PATH.
@@ -23,41 +20,44 @@ RNAFold:
   params:
     max_bp_span: 0
     method: "mfe" # 'mfe' for default mode, 'p' for partition function mode 
-    m6A: False # Whether to consider m6A modifications, default is False
 
 RNASubopt:
   executable: "RNAsubopt"
   params:
-    n_struc: 75  # Number of structures to generate, works only of probability-based mode
+    n_struc: 20 # Number of structures to generate, works only of probability-based mode
     method: "z" # 'z' Zuker suboptionals mode (default), 'p' for probability-based mode
-    m6A: False # Whether to consider m6A modifications, default is False
 
 EternaFold:
-  executable: "./../EternaFold-master/src/contrafold"
+  executable: "./../EternaFold/src/contrafold"
   params:
-    eternaFold_params: "../EternaFold-master/parameters/EternaFoldParams.v1"
-    eternaFold_params_shape: "../EternaFold-master/parameters/EternaFoldParams_PLUS_POTENTIALS.v1"
+    eternaFold_params: "../EternaFold/parameters/EternaFoldParams.v1"
+    eternaFold_params_shape: "../EternaFold/parameters/EternaFoldParams_PLUS_POTENTIALS.v1"
     nsamples: 75
 
 LinearFold:
-  executable: "./../LinearFold-master/linearfold"
+  executable: "./../LinearFold/linearfold"
   params: 
     delta: 5.0
 
 ct2dot:
   # Path to the RNAstructure "ct2dot" executable
-  executable: "../RNAstructureLinuxTextInterfaces64bit/RNAstructure/exe/ct2dot"
+  executable: "../RNAstructure/exe/ct2dot"
   params:
     st_num: 0
 
 ShapeConversion:
   params:
     thresholds:
-      high: 0.9
+      high: 0.85
       medium: 0.5
       low: 0.3
     coefficients:
-      high: 2.5
+      high: 2.25
       medium: 1.25
       low: 0.75
-      default: 0.0
+      default: ""
+
+Scoring:
+  # options: A= identity score, B= semi-identity score, C= similarity score, D= matching brackets
+  # see descriptions in utils.py
+  score: "A"  
