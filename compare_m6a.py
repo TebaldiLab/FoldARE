@@ -444,7 +444,7 @@ def main():
             plot_series_over_positions(
                 seq=seq_no_mod,
                 ys_list=[ent_no_mod, ent_m6],
-                labels=["RNAstructure no_mod", "RNAstructure m6A"],
+                labels=["RNAstr no_mod", "RNAstr m6A"],
                 colors=[ENSEMBLE_COLORS['R'], ENSEMBLE_COLORS['R6']],
                 freq_list=[freq_no_mod, freq_m6],
                 title="Positional Shannon Entropy – RNAstructure (no_mod vs m6A)",
@@ -455,7 +455,7 @@ def main():
             plot_series_over_positions(
                 seq=seq_no_mod,
                 ys_list=[cons_no_mod, cons_m6],
-                labels=["RNAstructure no_mod", "RNAstructure m6A"],
+                labels=["RNAstr no_mod", "RNAstr m6A"],
                 colors=[ENSEMBLE_COLORS['R'], ENSEMBLE_COLORS['R6']],
                 freq_list=[freq_no_mod, freq_m6],
                 title="Positional Consensus – RNAstructure (no_mod vs m6A)",
@@ -468,7 +468,7 @@ def main():
             plot_series_over_positions(
                 seq=seq_no_mod,
                 ys_list=[freq_no_mod['.'], freq_m6['.']],
-                labels=["RNAstructure no_mod", "RNAstructure m6A"],
+                labels=["RNAstr no_mod", "RNAstr m6A"],
                 colors=[ENSEMBLE_COLORS['R'], ENSEMBLE_COLORS['R6']],
                 freq_list=[freq_no_mod, freq_m6],
                 title="Per-position fraction of unpaired nucleotides (no_mod vs m6A)",
@@ -487,7 +487,7 @@ def main():
             plot_series_over_positions(
                 seq=seq_m6a,
                 ys_list=[ent_V_m6, ent_R_m6],
-                labels=["Vienna m6A", "RNAstructure m6A"],
+                labels=["Vienna m6A", "RNAstr m6A"],
                 colors=[ENSEMBLE_COLORS['V6'], ENSEMBLE_COLORS['R6']],
                 freq_list=[freq_V_m6, freq_R_m6],
                 title="Positional Shannon Entropy – m6A (Vienna vs RNAstructure)",
@@ -498,7 +498,7 @@ def main():
             plot_series_over_positions(
                 seq=seq_m6a,
                 ys_list=[cons_V_m6, cons_R_m6],
-                labels=["Vienna m6A", "RNAstructure m6A"],
+                labels=["Vienna m6A", "RNAstr m6A"],
                 colors=[ENSEMBLE_COLORS['V6'], ENSEMBLE_COLORS['R6']],
                 freq_list=[freq_V_m6, freq_R_m6],
                 title="Positional Consensus – m6A (Vienna vs RNAstructure)",
@@ -512,7 +512,7 @@ def main():
             plot_series_over_positions(
                 seq=seq_m6a,
                 ys_list=[freq_V_m6['.'], freq_R_m6['.']],
-                labels=["Vienna m6A", "RNAstructure m6A"],
+                labels=["Vienna m6A", "RNAstr m6A"],
                 colors=[ENSEMBLE_COLORS['V6'], ENSEMBLE_COLORS['R6']],
                 freq_list=[freq_V_m6, freq_R_m6],
                 title="Per-position fraction of unpaired nucleotides (m6A Vienna vs m6A RNAstructure)",
