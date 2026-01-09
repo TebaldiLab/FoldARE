@@ -90,9 +90,9 @@ def parse_cli_args():
     parser.add_argument("-c", "--config", default="config.yaml", help="YAML configuration file")
     parser.add_argument("--shape", help="Existing SHAPE file – skip ensemble step")
     parser.add_argument("--ens_n", type=int, help="Target ensemble size for all tools")
-    parser.add_argument("--ens_nsamples", type=int)
-    parser.add_argument("--ens_maxm", type=int)
-    parser.add_argument("--ens_par", type=int)
+    #parser.add_argument("--ens_nsamples", type=int)
+    #parser.add_argument("--ens_maxm", type=int)
+    #parser.add_argument("--ens_par", type=int)
     parser.add_argument("--ens_delta", type=float)
     return parser.parse_args()
 
@@ -218,11 +218,11 @@ def write_ensemblefold_summary(
 
     lines.append("Key parameters\n")
     lines.append(f"  global_ensemble_size (target): {ensemble_target}\n")
-    lines.append(f"  nsamples/n_struc (effective)  : {nsamples}\n")
-    if maxm is not None:
-        lines.append(f"  maxm (RNAStructure)           : {maxm}\n")
-    if par is not None:
-        lines.append(f"  par  (RNAsubopt)              : {par}\n")
+    #lines.append(f"  nsamples/n_struc (effective)  : {nsamples}\n")
+    #if maxm is not None:
+    #    lines.append(f"  maxm (RNAStructure)           : {maxm}\n")
+    #if par is not None:
+    #    lines.append(f"  par  (RNAsubopt)              : {par}\n")
     if delta is not None:
         lines.append(f"  delta (LinearFold)            : {delta}\n")
     lines.append(f"  SHAPE input source            : {shape_source}\n")
@@ -481,12 +481,19 @@ def main():
     env_cfg = cfg.get("environment", {})
     apply_environment(env_cfg)
 
-    ensemble_target = args.ens_n if args.ens_n is not None else cfg.get("global_ensemble_size")
+    #ensemble_target = args.ens_n if args.ens_n is not None else cfg.get("global_ensemble_size")
+    if args.ens_n:
+        ensemble_target = args.ens_n
+    else:
+        ensemble_target = 75
+
     ensemble_cfg = cfg.get(ensemble_tool, {})
     predictor_cfg = cfg.get(predictor_tool, {})
     ct2_cfg = cfg.get("ct2dot", {})
     shape_cfg = cfg.get("ShapeConversion", {}).get("params", {})
-
+    delta=cfg.get("LinearFold", {}).get("params", {})["delta"]  # to get delta from cfg file (LinFold only)
+    
+    
     ens_exec = ensemble_cfg.get("executable")
     pred_exec = predictor_cfg.get("executable")
     ct2_exec = ct2_cfg.get("executable")
@@ -499,11 +506,16 @@ def main():
         pred_params_cfg["m6A"] = True
     ct2_params_cfg = ct2_cfg.get("params", {})
 
-    nsamples = ensemble_target or select(ens_params_cfg, args.ens_nsamples, "n_struc")
-    maxm = ensemble_target or select(ens_params_cfg, args.ens_maxm, "maxm")
-    par = select(ens_params_cfg, args.ens_par, "par")
-    delta = select(ens_params_cfg, args.ens_delta, "delta") or ens_params_cfg.get("delta", 5.0)
-
+    #nsamples = ensemble_target or select(ens_params_cfg, args.ens_nsamples, "n_struc")
+    #nsamples = select(ens_params_cfg, args.ens_nsamples, "n_struc") or ensemble_target   # select() first for choosing input over default
+    #maxm = ensemble_target or select(ens_params_cfg, args.ens_maxm, "maxm")
+    maxm = ensemble_target
+    
+    nsamples = ensemble_target
+    #par = select(ens_params_cfg, args.ens_par, "par")
+    par = ens_params_cfg
+    #delta = select(ens_params_cfg, args.ens_delta, "delta") or ens_params_cfg.get("delta", 5.0)
+    
     ensure_dir(args.output_folder)
     base_name = os.path.splitext(os.path.basename(args.sequence))[0]
 
