@@ -29,6 +29,8 @@ similarly, edit the executable path for RNAstructure, EternaFold, ViennaRNA.
 Versions used for development:  
 ViennaRNA (v2.7.0), &nbsp;RNAstructure (v6.5), &nbsp;LinearFold (commit c3ee9bd from 29.08.2022), &nbsp;EternaFold (commit 13d2487 from 17.07.2024)  
 
+&nbsp; The config.yaml file specifies parameters for prediction and analysis. The default values can be customized directly editing the text file (incl. alternative options for consensus scoring)
+  
   
 ### requirements  
 FoldARE was implemented in Python 3.10; Python libraries included: numpy, pandas, plotly, ruamel.yaml.  
@@ -115,4 +117,4 @@ In the `example/` folder are:
 1. .fasta file with the RNA sequnce 
 2. .txt file with the corresponding m6a modifications' positions for the sequence.
 
-This system is included in the repository as the instrument to validate the functionality of FoldARE upon installation.
+This folder is included in the repository to validate the functionalities of FoldARE upon installation.
