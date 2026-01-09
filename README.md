@@ -29,7 +29,7 @@ similarly, edit the executable path for RNAstructure, EternaFold, ViennaRNA.
 Versions used for development:  
 ViennaRNA (v2.7.0), &nbsp;RNAstructure (v6.5), &nbsp;LinearFold (commit c3ee9bd from 29.08.2022), &nbsp;EternaFold (commit 13d2487 from 17.07.2024)  
 
-&nbsp; The config.yaml file specifies parameters for prediction and analysis. The default values can be customized directly editing the text file (incl. alternative options for consensus scoring)
+The config.yaml file specifies parameters for prediction and analysis. The default values can be customized directly editing the text file (incl. alternative options for consensus scoring)
   
   
 ### requirements  
