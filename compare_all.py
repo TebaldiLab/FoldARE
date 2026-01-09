@@ -36,6 +36,10 @@ from plotly.subplots import make_subplots
 from ruamel.yaml import YAML
 
 import utils
+diz_score={"A":utils.similarity_scoreA,"B":utils.similarity_scoreB,"C":utils.similarity_scoreC,"D":utils.similarity_scoreD}
+#simscore = "A"  #"A" or "B", or "C", or "D"
+#similarity_func=diz_score[simscore]
+
 
 # ─── Letter‐to‐tool & colors ───────────────────────────────────────────────────
 LETTER_MAP = {
@@ -214,10 +218,15 @@ def main():
     apply_environment(cfg)
 
     seq = load_sequence(args.sequence)
-
-    scoring_method = cfg.get("scoring", {}).get("method", "identity")
-    similarity_func = utils.get_similarity_func(scoring_method)
-
+    
+    cfg2=load_config("config.yaml")
+    simscore=cfg2.get("Scoring", {})["score"]
+    
+    similarity_func=diz_score[simscore]
+    
+    #scoring_method = cfg.get("scoring", {}).get("method", "identity")
+    #similarity_func = utils.get_similarity_func(scoring_method)
+    
     base = Path(args.sequence).stem
 
     M = args.ens_n if args.ens_n is not None else cfg.get("global_ensemble_size", 20)
@@ -505,7 +514,7 @@ def main():
             seq_label=args.sequence,
             M=M,
             top_n=top_n,
-            scoring_method=scoring_method
+            scoring_method=simscore
         )
 
     finally:

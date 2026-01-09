@@ -37,6 +37,10 @@ from ruamel.yaml import YAML
 
 import utils
 
+diz_score={"A":utils.similarity_scoreA,"B":utils.similarity_scoreB,"C":utils.similarity_scoreC,"D":utils.similarity_scoreD}
+#simscore = "A"  #"A" or "B", or "C", or "D"
+#similarity_func=diz_score[simscore]
+
 LETTER_MAP = {
     "E": "EternaFold",
     "V": "RNASubopt",
@@ -254,8 +258,14 @@ def main():
     apply_environment(CFG)
 
     # ─── determine scoring method ───────────────────────────────────────────────
-    scoring_method = CFG.get("scoring", {}).get("method", "identity")
-    similarity_func = utils.get_similarity_func(scoring_method)
+    #scoring_method = CFG.get("scoring", {}).get("method", "identity")
+    #similarity_func = utils.get_similarity_func(scoring_method)
+    
+    
+    cfg2=load_config("config.yaml")
+    simscore=cfg2.get("Scoring", {})["score"]
+    
+    similarity_func=diz_score[simscore]
 
     # ─── determine ensemble‐size (ens_n) and best‐structures count (top_n) ─────────
     ens_n = args.ens_n if args.ens_n is not None else CFG.get("global_ensemble_size", 20)
@@ -288,7 +298,7 @@ def main():
                 zrow.append(score)
                 pair_scores.append((rows[i], cols[j], s1, s2, score))
                 hover = (
-                    f"similarity_score ({scoring_method}) = {score:.3f}<br>"
+                    f"similarity_score ({simscore}) = {score:.3f}<br>"
                     f"seq = {seq[:70]}{'/' if len(seq)>70 else ''}<br>"
                     f"{rows[i][0] + '0' + rows[i][1:] if int(rows[i][1:]) < 10 else rows[i]} – {s1[:70]}{'/' if len(s1)>70 else ''}<br>"
                     f"{cols[j][0] + '0' + cols[j][1:] if int(cols[j][1:]) < 10 else cols[j]} – {s2[:70]}{'/' if len(s2)>70 else ''}"
@@ -636,7 +646,7 @@ def main():
             e1=e1, e2=e2,
             ens_n=ens_n,
             top_n=top_n,
-            scoring_method=scoring_method
+            scoring_method=simscore
         )
 
     finally:
