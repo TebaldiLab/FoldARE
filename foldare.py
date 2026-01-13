@@ -51,7 +51,8 @@ from utils import (
     RNASubopt,
     clean_ensemble_file,
     convert_shape_to_bpseq,
-    create_shape_file,
+    create_shape_file,    
+    create_shape_file_LinFold,
 )
 
 LETTER_MAP = {
