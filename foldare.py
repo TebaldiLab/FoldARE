@@ -365,13 +365,22 @@ def build_shape_file(
     shape_cfg: dict,
 ):
     shape_file = os.path.join(output_folder, f"{base_name}_shape.txt")
-    create_shape_file(
-        ensemble_db,
-        shape_file,
-        thresholds=shape_cfg.get("thresholds", {}),
-        coefficients=shape_cfg.get("coefficients", {}),
-        linearfold_style=(predictor_choice.lower() == "linearfold"),
-    )
+    if predictor_choice=="LinearFold":
+        create_shape_file_LinFold(
+            ensemble_db,
+            shape_file,
+            thresholds=shape_cfg.get("thresholds", {}),
+            coefficients=shape_cfg.get("coefficients", {}),
+            linearfold_style=(predictor_choice.lower() == "linearfold"),
+        )
+    else:
+        create_shape_file(
+            ensemble_db,
+            shape_file,
+            thresholds=shape_cfg.get("thresholds", {}),
+            coefficients=shape_cfg.get("coefficients", {}),
+            linearfold_style=(predictor_choice.lower() == "linearfold"),
+        )
     return shape_file
 
 
@@ -433,6 +442,7 @@ def predict_structure(
         LinearFold(**kw)
 
     elif ptool == "rnastructure":
+        max_str_in_out=1 # conformers in output for RNAstr --> 1 = only best (for possible alternative conformers, set to > 1)
         kw = filter_kwargs(
             RNAStructure,
             {
@@ -441,11 +451,11 @@ def predict_structure(
                 "coinput_file": shape_file,
                 "executable": pred_exec,
                 **pred_params_cfg,
-                "maxm": 1,
+                "maxm": max_str_in_out  
             },
         )
         RNAStructure(**kw)
-
+     
     elif ptool == "rnafold":
         kw = filter_kwargs(
             RNAFold,
