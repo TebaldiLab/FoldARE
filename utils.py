@@ -262,6 +262,39 @@ def create_shape_file(
 
     print("Shape file created:", shape_file_out)
 
+def create_shape_file_LinFold(
+    ensemble_file: str,
+    shape_file_out: str,
+    thresholds: Dict[str, float],
+    coefficients: Dict[str, float],
+    linearfold_style: bool = False,
+) -> None:
+
+    ensemble = extract_ensemble(ensemble_file)
+    if not ensemble:
+        sys.exit(f"Error: No valid ensemble sequences found in {ensemble_file}.")
+
+    dots = count_dots(ensemble)
+    shape_lines = ""
+
+    for i, prob in enumerate(dots):
+        pos = i + 1  # positions are 1-indexed
+
+        if thresholds["high"] > prob > thresholds["medium"]:
+            value = prob * coefficients["medium"]
+        elif prob >= thresholds["high"]:
+            value = prob * coefficients["high"]
+        elif thresholds["medium"] >= prob > thresholds["low"]:
+            value = prob * coefficients["low"]
+        else:
+            value = "0.0"
+        shape_lines += f"{pos} {value}\n"
+
+    with open(shape_file_out, "w") as f:
+        f.write(shape_lines)
+
+    print("Shape file created:", shape_file_out)
+
 
 def convert_shape_to_bpseq(shape_file: str, bpseq_file: str, seq_file: str) -> None:
     """
