@@ -1,7 +1,7 @@
 # FoldARE: Folding and Analysis of RNA ensembles
 
 FoldARE is a computational tool for the prediction and analysis of RNA secondary structure.  
-The prediction step is based on a two-step strategy:  
+The prediction step (foldare_predict) is based on a two-step strategy:  
 
  &nbsp;&nbsp;step 1 - from an RNA fasta:   
  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(a)  predicts an ensemble,   
@@ -10,7 +10,7 @@ The prediction step is based on a two-step strategy:
     
 It builds on the combination of some available, well established, methods: V, R, L, E  (for ViennaRNA, RNAstructure, LinearFold, EternaFold, respectively). For clarity, we refer to ViennaRNA (V), both when used as a predictor (RNAfold module), or as an ensembler (RNAsubopt module); for RNAstructure (R), we employed in all cases the Fold module.  
 Any of these methods can be used interchangeably for creating ensembles (step1) or predicting w/ the pseudo-SHAPE co-input (step2).  
-In its default mode, it runs EternaFold for step1 and RNAstructure for step2.
+In its default mode, foldare_predict runs EternaFold for step1 and RNAstructure for step2.
 
 ## Installation
 Clone the repository:
