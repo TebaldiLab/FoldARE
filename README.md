@@ -1,6 +1,6 @@
 # FoldARE: Folding and Analysis of RNA ensembles
 
-FoldARE is a computatonal tool for the prediction and analysis of RNA secondary structure.  
+FoldARE is a computational tool for the prediction and analysis of RNA secondary structure.  
 The prediction step is based on a two-step strategy:  
 
  &nbsp;&nbsp;step 1 - from an RNA fasta:   
@@ -8,7 +8,8 @@ The prediction step is based on a two-step strategy:
  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(b)  through stastical weighting creates a pseudo-SHAPE co-input  
  &nbsp;&nbsp;step 2 - from the same RNA fasta, uses the pseudo-SHAPE co-input to predict the final 2D structure 
     
-It builds on the combination of some available, well established, methods: V, R, L, E  (for ViennaRNA, RNAstructure, LinearFold, EternaFold).  Any of these methods can be used interchangeably for creating ensembles (step1) or predicting w/ the pseudo-SHAPE co-input (step2).  
+It builds on the combination of some available, well established, methods: V, R, L, E  (for ViennaRNA, RNAstructure, LinearFold, EternaFold, respectively). For clarity, we refer to ViennaRNA (V), both when used as a predictor (RNAfold module), or as an ensembler (RNAsubopt module); for RNAstructure (R), we employed in all cases the Fold module.  
+Any of these methods can be used interchangeably for creating ensembles (step1) or predicting w/ the pseudo-SHAPE co-input (step2).  
 In its default mode, it runs EternaFold for step1 and RNAstructure for step2.
 
 ## Installation
@@ -42,19 +43,19 @@ conda env create -f dependencies.yaml
 ## PREDICTION 
 
 ```bash
-python foldare.py -s input_fasta
+python foldare_predict.py -s input_fasta
 ```
 arguments:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
     -s: RNA sequence in FASTA format </pre>
 optional arguments:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;">
-	-e: choice of the method used to create the ensemble of step 1 
-	-p: choice of method used to predict (w/ pseudo-SHAPE co-input)
+	-e: choice of the method used to create the ensemble of step 1 (default=E, EternaFold)
+	-p: choice of method used to predict (w/ pseudo-SHAPE co-input) (default=R, RNAstructure)
 	--ens_n: max number of models in the ensemble
 </pre>
 example:
-<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> python foldare.py -s test.fasta -e E -p R --ens_n 75</pre>
+<pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> python foldare_predict.py -s test.fasta -e E -p R --ens_n 75</pre>
 
 ## ANALYSIS  
 
@@ -114,7 +115,7 @@ example:
 
 ## Example sequence with m6a modifications
 In the `example/` folder are:
-1. .fasta file with the RNA sequnce 
-2. .txt file with the corresponding m6a modifications' positions for the sequence.
+1. .fasta file with the RNA sequence (a known case of m6A modified RNA)
+2. .txt file with the corresponding m6a modifications' positions for the sequence (known m6A sites).
 
 This folder is included in the repository to validate the functionalities of FoldARE upon installation.
