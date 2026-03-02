@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 """
 compare_all.py
@@ -37,6 +38,8 @@ from ruamel.yaml import YAML
 
 import utils
 diz_score={"A":utils.similarity_scoreA,"B":utils.similarity_scoreB,"C":utils.similarity_scoreC,"D":utils.similarity_scoreD}
+
+
 
 # ─── Letter‐to‐tool & colors ───────────────────────────────────────────────────
 LETTER_MAP = {
@@ -221,6 +224,7 @@ def main():
     
     similarity_func=diz_score[simscore]
     
+   
     base = Path(args.sequence).stem
 
     M = args.ens_n if args.ens_n is not None else cfg.get("global_ensemble_size", 20)
@@ -245,16 +249,28 @@ def main():
         # compute pairwise structure similarity scores
         # initialize aggregate dict
         agg = { entry['id']: 0.0 for entry in all_structs }
+        
+        intra_evaluation=False   # if False:  models from a method (e.g. L) are compared only  with other methods' models (e.g. L01 model vs any R, V, E models; but not any other L models)
         for i in range(N):
             si = all_structs[i]['struct']
             idi= all_structs[i]['id']
+            method_i= all_structs[i]['letter']
+
             for j in range(N):
                 if i == j: 
                     continue
                 sj = all_structs[j]['struct']
-                score = similarity_func(si, sj)
-                agg[idi] += score
+                idj= all_structs[j]['id']
+                method_j= all_structs[j]['letter']
+                if intra_evaluation is False:
+                 if method_i != method_j:    
+                
+                    score = similarity_func(si, sj)
+                    agg[idi] += score
 
+                else:
+                    score = similarity_func(si, sj)
+                    agg[idi] += score
         # prepare ranking
         ranked = sorted(all_structs,
                         key=lambda e: agg[e['id']],
