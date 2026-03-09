@@ -1,16 +1,20 @@
-# FoldARE: Folding and Analysis of RNA ensembles
+# *Fold*ARE: Folding and Analysis of RNA ensembles
 
-FoldARE is a computational tool for the prediction and analysis of RNA secondary structure.  
-The prediction step (foldare_predict) is based on a two-step strategy:  
+*Fold*ARE is a computational tool for the prediction and analysis of RNA secondary structure.  
+The prediction step (*foldare_predict*) is based on a two-step strategy:  
 
  &nbsp;&nbsp;step 1 - from an RNA fasta:   
  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(a)  predicts an ensemble,   
- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(b)  through stastical weighting creates a pseudo-SHAPE co-input  
- &nbsp;&nbsp;step 2 - from the same RNA fasta, uses the pseudo-SHAPE co-input to predict the final 2D structure 
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(b)  through stastical weighting creates a *pseudo-SHAPE* co-input  
+ &nbsp;&nbsp;step 2 - from the same RNA fasta, uses the *pseudo-SHAPE* co-input to predict the final 2D structure 
     
-It builds on the combination of some available, well established, methods: V, R, L, E  (for ViennaRNA, RNAstructure, LinearFold, EternaFold, respectively). For clarity, we refer to ViennaRNA (V), both when used as a predictor (RNAfold module), or as an ensembler (RNAsubopt module); for RNAstructure (R), we employed in all cases the Fold module.  
-Any of these methods can be used interchangeably for creating ensembles (step1) or predicting w/ the pseudo-SHAPE co-input (step2).  
-In its default mode, foldare_predict runs EternaFold for step1 and RNAstructure for step2.
+It builds on the combination of some available, well established, methods: &nbsp;V, &nbsp;R, &nbsp;L, &nbsp;E  &nbsp;(for ViennaRNA, RNAstructure, LinearFold, EternaFold, respectively). For clarity, we refer to ViennaRNA (V) when used as either a predictor (RNAfold module) or an ensembler (RNAsubopt module); for RNAstructure (R), we employed the Fold module in all cases.
+Any of these methods can be used interchangeably for creating ensembles (step1) or predicting w/ the *pseudo-SHAPE* co-input (step2).  
+In its default mode, *foldare_predict* runs EternaFold for step1 and RNAstructure for step2.
+
+*Fold*ARE is detailed in:  
+Marino SM, Husak V, Tebaldi T (2026) "FoldARE, an RNA secondary structure analysis and prediction tool via generative pseudo-SHAPE modeling"
+*doi: 10.64898/2026.03.04.709501* &nbsp; (*preprint*)
 
 ## Installation
 Clone the repository:
