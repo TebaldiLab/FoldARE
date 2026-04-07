@@ -123,3 +123,7 @@ In the `example/` folder are:
 2. .txt file with the corresponding m6a modifications' positions for the sequence (known m6A sites).
 
 This folder is included in the repository to validate the functionalities of FoldARE upon installation.
+
+## datasets folder
+The `datasets/` folder contains the datasets used to develop and test `foldare_predict` (25db for development; filtered, non-redundant subsets of Archivell, RNAstrand, bpRNA, and eFold for testing). This folder is included in the repository for additional testing and reproducibility of the results in Marino SM, Husak V, Tebaldi T (2026) "FoldARE, an RNA secondary structure analysis and prediction tool via generative pseudo-SHAPE modeling" *doi: 10.64898/2026.03.04.709501* (preprint).
+
