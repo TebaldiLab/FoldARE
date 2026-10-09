@@ -19,7 +19,7 @@ Marino SM, Husak V, Tebaldi T (2026) "FoldARE, an RNA secondary structure analys
 ## Installation
 Clone the repository:
 ```bash
-git clone https://github.com/yourusername/FoldARE.git
+git clone https://github.com/TebaldiLab/FoldARE.git
 cd FoldARE
 ```
 note:  FoldARE pipeline requires command-line installations of the four external methods (V, R, L, E mentioned above);&nbsp; once installed, update the path accordingly, in the config.yaml file. &nbsp; For example, for LinearFold (if installed in /home/user/) edit the config.yaml :
