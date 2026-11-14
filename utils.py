@@ -15,7 +15,7 @@ def ct2dot(ct_file: str, db_file: str, st_num: int = 0, ct2dot_folder: str = "do
     os.system(command)
 
 
-def RNAStructure(  # noqa: N802 - keep historical name
+def RNAStructure(  
     seq_file: str,
     out_file: str,
     m6A: bool = False,
@@ -39,7 +39,7 @@ def RNAStructure(  # noqa: N802 - keep historical name
     os.system(command)
 
 
-def RNAFold(  # noqa: N802 - keep historical name
+def RNAFold(  
     seq_file: str,
     out_file: str,
     max_bp_span: int = 600,
@@ -69,7 +69,7 @@ def RNAFold(  # noqa: N802 - keep historical name
     os.system(command)
 
 
-def RNASubopt(  # noqa: N802 - keep historical name
+def RNASubopt(  
     seq_file: str,
     out_file: str,
     n_struc: int = 20,
@@ -92,7 +92,7 @@ def RNASubopt(  # noqa: N802 - keep historical name
     os.system(command)
 
 
-def EternaFold(  # noqa: N802 - keep historical name
+def EternaFold(  
     seq_file: str,
     out_file: str,
     mode: str = "predict",
@@ -125,7 +125,7 @@ def EternaFold(  # noqa: N802 - keep historical name
     os.system(command)
 
 
-def LinearFold(  # noqa: N802 - keep historical name
+def LinearFold(  
     seq_file: str,
     out_file: str,
     mode: str = "predict",
