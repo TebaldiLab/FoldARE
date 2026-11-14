@@ -12,7 +12,7 @@ RNAStructure:
   executable: "../RNAstructure/exe/Fold-smp"
   params:
     a: "m6A"
-    maxm: 75
+    maxm: 500  # Max number of ensemble structures
 
 RNAFold:
   # For RNAFold, we assume the command is available in PATH.
@@ -24,15 +24,15 @@ RNAFold:
 RNASubopt:
   executable: "RNAsubopt"
   params:
-    n_struc: 20 # Number of structures to generate, works only of probability-based mode
-    method: "z" # 'z' Zuker suboptionals mode (default), 'p' for probability-based mode
+    n_struc: 500  # Max number of ensemble structures -- works only for probability-based mode
+    method: "p" # 'z' Zuker suboptionals mode (default), 'p' for probability-based mode
 
 EternaFold:
   executable: "./../EternaFold/src/contrafold"
   params:
     eternaFold_params: "../EternaFold/parameters/EternaFoldParams.v1"
     eternaFold_params_shape: "../EternaFold/parameters/EternaFoldParams_PLUS_POTENTIALS.v1"
-    nsamples: 75
+    nsamples: 500
 
 LinearFold:
   executable: "./../LinearFold/linearfold"
@@ -44,6 +44,11 @@ ct2dot:
   executable: "../RNAstructure/exe/ct2dot"
   params:
     st_num: 0
+
+printps:
+   executable: "../RNAstructure/exe/draw"
+   params:
+    out_style: "c"  # circular
 
 ShapeConversion:
   params:
