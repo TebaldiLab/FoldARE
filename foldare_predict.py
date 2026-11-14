@@ -53,6 +53,7 @@ from utils import (
     convert_shape_to_bpseq,
     create_shape_file,
     create_shape_file_LinFold,
+    ensure_dense_shape_file,
 )
 
 LETTER_MAP = {
@@ -90,9 +91,10 @@ def parse_cli_args():
     parser.add_argument("-o", "--output_folder", default="foldare_results", help="Output folder")
     parser.add_argument("-c", "--config", default="config.yaml", help="YAML configuration file")
     parser.add_argument("--shape", help="Existing SHAPE file – skip ensemble step")
+    parser.add_argument("--shape_ens", help="Existing SHAPE file for ensemble generation")
     parser.add_argument("--ens_n", type=int, help="Target ensemble size for all tools")
 
-    parser.add_argument("--ens_delta", type=float)
+    #parser.add_argument("--ens_delta", type=float)
     return parser.parse_args()
 
 
@@ -218,8 +220,8 @@ def write_ensemblefold_summary(
     lines.append("Key parameters\n")
     lines.append(f"  global_ensemble_size (target): {ensemble_target}\n")
 
-    if delta is not None:
-        lines.append(f"  delta (LinearFold)            : {delta}\n")
+    #if delta is not None:
+    #    lines.append(f"  delta (LinearFold)            : {delta}\n")
     lines.append(f"  SHAPE input source            : {shape_source}\n")
 
     if generated:
@@ -255,6 +257,7 @@ def build_ensemble(
     if ens_m6a:
         ens_db = ens_db.replace(".db", "_m6A.db")
     etool_lower = etool.lower()
+    shape_ens = getattr(args, "shape_ens", None)
 
     if etool_lower == "rnasubopt":
         desired = ensemble_target or nsamples or 1
@@ -268,6 +271,7 @@ def build_ensemble(
                     "n_struc": nsamples,
                     "method": ens_params_cfg.get("method"),
                     "executable": ens_exec,
+                    "coinput_file": shape_ens,
                     **ens_params_cfg,
                 },
             )
@@ -281,25 +285,44 @@ def build_ensemble(
         os.replace(tmp_db, ens_db)
 
     elif etool_lower == "eternafold":
+        seq_input = args.sequence
+        if shape_ens:
+            bpseq = os.path.join(args.output_folder, f"{base_name}_shape_ens.bpseq")
+            convert_shape_to_bpseq(shape_ens, bpseq, args.sequence)
+            seq_input = bpseq
+
         EternaFold(
             **filter_kwargs(
                 EternaFold,
                 {
-                    "seq_file": args.sequence,
+                    "seq_file": seq_input,
                     "out_file": ens_db,
                     "mode": "sample",
                     "nsamples": nsamples,
                     "executable": ens_exec,
+                    "eternaFold_params_shape": ens_params_cfg.get("eternaFold_params_shape"),
                     **ens_params_cfg,
                 },
             )
         )
         clean_in_place(ens_db)
 
+
     elif etool_lower == "linearfold":
         desired = ensemble_target or nsamples or 1
         current_delta = delta
+        max_delta = delta + 30.0  # Safety cap to prevent infinite loop
         tmp_db = ens_db + ".tmp"
+
+        coinput = shape_ens
+        if shape_ens:
+            dense_shape = os.path.join(args.output_folder, f"{base_name}_shape_ens_dense.txt")
+            ensure_dense_shape_file(shape_ens, dense_shape, args.sequence)
+            coinput = dense_shape
+
+        last_count = 0
+        stagnant_steps = 0
+
         while True:
             LinearFold(
                 **filter_kwargs(
@@ -310,19 +333,36 @@ def build_ensemble(
                         "mode": "ensemble",
                         "delta": current_delta,
                         "executable": ens_exec,
+                        "coinput_file": coinput,
                     },
                 )
             )
             clean_in_place(tmp_db)
             with open(tmp_db) as fh:
                 lines = fh.readlines()
-            if len(lines) >= desired:
+
+            count = len(lines)
+            if count >= desired or current_delta >= max_delta:
                 break
+
+            # If increasing delta does not yield any new structures over 3 attempts, break safely
+            if count == last_count:
+                stagnant_steps += 1
+                if stagnant_steps >= 3:
+                    print(f"LinearFold ensemble generation capped at {count} structures.")
+                    break
+            else:
+                stagnant_steps = 0
+                last_count = count
+
             current_delta += 1.0
+
         if len(lines) > desired:
-            with open(tmp_db, "w") as fh:
+            with open(tmp_db) as fh:
                 fh.writelines(lines[:desired])
         os.replace(tmp_db, ens_db)
+
+
 
     elif etool_lower == "rnastructure":
         RNAStructure(
@@ -333,6 +373,7 @@ def build_ensemble(
                     "out_file": ens_db,
                     "executable": ens_exec,
                     "maxm": maxm,
+                    "coinput_file": shape_ens,
                     **ens_params_cfg,
                 },
             )
@@ -341,6 +382,8 @@ def build_ensemble(
 
     else:
         raise ValueError(f"Unsupported ensemble tool: {etool}")
+
+    
 
     if etool_lower not in ["linearfold", "rnastructure"] and ensemble_target is not None:
         with open(ens_db) as fh:
@@ -391,22 +434,15 @@ def predict_structure(
     pred_params_cfg: dict,
 ):
     ptool = predictor_choice.lower()
-    if args.shape is None:
-        pred_out = os.path.join(args.output_folder, f"{base_name}_{ens_tool.lower()}_{ptool}_final.db")
-        if ens_m6a:
-            pred_out = os.path.join(
-                args.output_folder, f"{base_name}_{ens_tool.lower()}_m6A_{ptool}_final.db"
-            )
-        if pred_m6a:
-            pred_out = os.path.join(
-                args.output_folder, f"{base_name}_{ens_tool.lower()}_m6A_{ptool}_m6A_final.db"
-            )
+    ens_str = f"{ens_tool.lower()}{'_m6A' if ens_m6a else ''}"
+    pred_str = f"{ptool}{'_m6A' if pred_m6a else ''}"
+
+    if args.shape is not None:
+        pred_out = os.path.join(args.output_folder, f"{base_name}_customShape_{pred_str}_final.db")
+    elif getattr(args, "shape_ens", None) is not None:
+        pred_out = os.path.join(args.output_folder, f"{base_name}_{ens_str}_customShape_ens_{pred_str}_final.db")
     else:
-        pred_out = os.path.join(args.output_folder, f"{base_name}_customShape_{ptool}_final.db")
-        if pred_m6a:
-            pred_out = os.path.join(
-                args.output_folder, f"{base_name}_customShape_{ptool}_m6A_final.db"
-            )
+        pred_out = os.path.join(args.output_folder, f"{base_name}_{ens_str}_{pred_str}_final.db")
 
     if ptool == "eternafold":
         bpseq = os.path.join(args.output_folder, f"{base_name}_shape.bpseq")
@@ -437,7 +473,7 @@ def predict_structure(
         LinearFold(**kw)
 
     elif ptool == "rnastructure":
-        max_str_in_out=1 # conformers in output for best (final) RNAstr --> 1 = only best; for more set it to > 1
+        max_str_in_out = 1
         kw = filter_kwargs(
             RNAStructure,
             {
@@ -446,7 +482,7 @@ def predict_structure(
                 "coinput_file": shape_file,
                 "executable": pred_exec,
                 **pred_params_cfg,
-                "maxm": max_str_in_out  
+                "maxm": max_str_in_out,
             },
         )
         RNAStructure(**kw)
@@ -554,9 +590,18 @@ def main():
     print("Pipeline completed – outputs in", os.path.abspath(args.output_folder))
     print("Result file:", os.path.abspath(pred_out))
 
+    #shape_source = (
+    #    "generated from ensemble" if args.shape is None else f"provided file: {os.path.abspath(args.shape)}"
+    #)
     shape_source = (
-        "generated from ensemble" if args.shape is None else f"provided file: {os.path.abspath(args.shape)}"
+        f"provided file for prediction: {os.path.abspath(args.shape)}"
+        if args.shape is not None
+        else f"provided file for ensemble: {os.path.abspath(args.shape_ens)}"
+        if getattr(args, "shape_ens", None) is not None
+        else "generated from ensemble"
     )
+
+    
     write_ensemblefold_summary(
         out_dir=args.output_folder,
         base_name=base_name,
@@ -583,6 +628,7 @@ def main():
         except:
             pass
         Ef2=open(pred_out,"w"); Ef2.write(EF_compatible); Ef2.close()        
-    os.system(ps_exec+" "+pred_out+" -c "+pred_out.replace(".db","")+".ps")
+    #os.system(ps_exec+" "+pred_out+" -c "+pred_out.replace(".db","")+".ps")  # draw it circular (-c)
+    os.system(ps_exec+" "+pred_out+" "+pred_out.replace(".db","")+".ps")  # draw it default (for printing only model 1, -n 1)
 if __name__ == "__main__":
     main()

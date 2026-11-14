@@ -81,15 +81,13 @@ def RNASubopt(  # noqa: N802 - keep historical name
     """Run RNAsubopt; supports SHAPE input, m6A flag, and 'p'/'z' methods."""
     method_flag = " -p" if method == "p" else " -z"
     m6_flag = " -m6" if m6A else ""
-    n_arg = f"{n_struc if method == 'p' else ''}"
-    if coinput_file:
-        command = (
-            f"{executable}{m6_flag}{method_flag} {n_arg} -s < {seq_file} > {out_file} 2>/dev/null"
-        )
-    else:
-        command = (
-            f"{executable}{m6_flag}{method_flag} {n_arg} -s < {seq_file} > {out_file} 2>/dev/null"
-        )
+    shape_flag = f" --shape {coinput_file}" if coinput_file else ""
+    #n_arg = f"{n_struc if method == 'p' else ''}"
+    n_arg = f" {n_struc}" if method == "p" else ""
+    
+    command = (
+        f"{executable}{m6_flag}{method_flag}{n_arg}{shape_flag} -s < {seq_file} > {out_file} 2>/dev/null"
+    )
     print("Running RNAsubopt command:", command)
     os.system(command)
 
@@ -106,18 +104,22 @@ def EternaFold(  # noqa: N802 - keep historical name
     """
     Run EternaFold via contrafold.
 
-    mode="sample": contrafold sample ... --nsamples <nsamples>
-    mode="predict": contrafold predict ... --evidence --numdatasources 1 --kappa 0.1
+    Supports both FASTA (.fasta) and SHAPE-containing BPSEQ (.bpseq) inputs
+    for both 'predict' and 'sample' modes.
     """
+    is_bpseq = seq_file.lower().endswith(".bpseq")
+    params = eternaFold_params_shape if is_bpseq else eternaFold_params
+    evidence_flags = " --evidence --numdatasources 1 --kappa 0.1" if is_bpseq else ""
+
     if mode == "sample":
         command = (
-            f"{executable} sample {seq_file} --params {eternaFold_params} "
-            f"--nsamples {nsamples} > {out_file}"
+            f"{executable} sample {seq_file} --params {params} "
+            f"--nsamples {nsamples}{evidence_flags} > {out_file}"
         )
     else:
         command = (
-            f"{executable} predict {seq_file} --evidence --numdatasources 1 --kappa 0.1 "
-            f"--params {eternaFold_params_shape} > {out_file}"
+            f"{executable} predict {seq_file}{evidence_flags} "
+            f"--params {params} > {out_file}"
         )
     print("Running EnernaFold command:", command)
     os.system(command)
@@ -137,21 +139,31 @@ def LinearFold(  # noqa: N802 - keep historical name
     mode="ensemble": cat <seq_file> | <executable> --zuker --delta <delta> [--shape ...]
     mode="predict" : cat <seq_file> | <executable> [-V --shape ...]
     """
+    actual_shape = coinput_file
+    if coinput_file and os.path.exists(coinput_file):
+        # Convert sparse SHAPE file to dense SHAPE format required by LinearFold
+        dense_shape = out_file + ".dense_shape"
+        ensure_dense_shape_file(coinput_file, dense_shape, seq_file)
+        actual_shape = dense_shape
+
+    shape_flag = f" --shape {actual_shape}" if actual_shape else ""
+
     if mode == "ensemble":
-        if coinput_file:
-            command = (
-                f"cat {seq_file} | {executable} --shape {coinput_file} "
-                f"--zuker --delta {delta} > {out_file}"
-            )
-        else:
-            command = f"cat {seq_file} | {executable} --zuker --delta {delta} > {out_file}"
+        command = f"cat {seq_file} | {executable}{shape_flag} --zuker --delta {delta} > {out_file}"
     else:
-        if coinput_file:
-            command = f"cat {seq_file} | {executable} -V --shape {coinput_file} > {out_file}"
-        else:
-            command = f"cat {seq_file} | {executable} > {out_file}"
+        command = f"cat {seq_file} | {executable} -V{shape_flag} > {out_file}"
+
     print("Running LinearFold command:", command)
     os.system(command)
+
+    # Clean up temporary dense SHAPE file if created
+    if actual_shape and actual_shape.endswith(".dense_shape") and os.path.exists(actual_shape):
+        try:
+            os.remove(actual_shape)
+        except OSError:
+            pass
+
+
 
 # -----------------------------------------------------------------------------
 # File processing functions
@@ -262,6 +274,7 @@ def create_shape_file(
 
     print("Shape file created:", shape_file_out)
 
+
 def create_shape_file_LinFold(
     ensemble_file: str,
     shape_file_out: str,
@@ -294,6 +307,7 @@ def create_shape_file_LinFold(
         f.write(shape_lines)
 
     print("Shape file created:", shape_file_out)
+
 
 
 def convert_shape_to_bpseq(shape_file: str, bpseq_file: str, seq_file: str) -> None:
@@ -347,6 +361,42 @@ def convert_shape_to_bpseq(shape_file: str, bpseq_file: str, seq_file: str) -> N
             out.write(f"{i} {nt} e1 {formatted_reactivity}\n")
 
     print(f"Converted (sparse-aware) {shape_file} to {bpseq_file}.")
+
+
+def ensure_dense_shape_file(shape_in: str, shape_out: str, seq_file: str) -> str:
+    """
+    Convert a sparse SHAPE file into a dense 1..L SHAPE file required by LinearFold.
+    Missing positions are filled with 0.0.
+    """
+    seq_lines = []
+    with open(seq_file, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith(">"):
+                seq_lines.append(line)
+    sequence = "".join(seq_lines)
+    L = len(sequence)
+
+    reactivities = {}
+    with open(shape_in, "r") as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) >= 2:
+                try:
+                    pos = int(parts[0])
+                    val = parts[1]
+                    reactivities[pos] = val
+                except ValueError:
+                    continue
+
+    with open(shape_out, "w") as out:
+        for pos in range(1, L + 1):
+            val = reactivities.get(pos, "0.0")
+            out.write(f"{pos} {val}\n")
+
+    return shape_out
+
+
 
 # -----------------------------------------------------------------------------
 # Structure comparison functions
@@ -558,7 +608,7 @@ def similarity_scoreD(pred, ref, tolerance=0):
     Args:
         pred: predicted dot-bracket string
         ref: reference dot-bracket string
-        tolerance: allowed position offset (default ±1)
+        tolerance: allowed position offset (e.g. ±1, default=0)
     
     Returns:
         f1_score: harmonic mean of precision and recall
