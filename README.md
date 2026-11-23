@@ -16,6 +16,8 @@ In its default mode, *foldare_predict* runs EternaFold for step1 and RNAstructur
 Marino SM, Husak V, Tebaldi T (2026) "FoldARE, an RNA secondary structure analysis and prediction tool via generative pseudo-SHAPE modeling"
 *doi: 10.64898/2026.03.04.709501* &nbsp; (*preprint*)
 
+> **Web Server & Documentation:** *Fold*ARE is also available as an online platform at **[https://rdds.it](https://rdds.it)**, where you can run the full suite of prediction and ensemble analysis tools directly in your browser without local installation, as well as access additional documentation.
+
 ## Installation
 Clone the repository:
 ```bash
