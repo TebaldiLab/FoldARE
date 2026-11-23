@@ -59,6 +59,8 @@ optional arguments:
 	--ens_n: max number of models in the ensemble
 	--shape SHAPE_file: skip ensemble step, uses custom SHAPE_file directly (predictor step)
 	--shape_ens SHAPE_file: uses SHAPE_file for ensemble generation (ensembler step)
+
+	For more options, -h   
 </pre>
 example:
 <pre style="font-family: Courier New; font-size: 85%; margin-left: 1em;"> python foldare_predict.py -s test.fasta -e E -p R --ens_n 75</pre>
