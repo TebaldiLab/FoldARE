@@ -5,7 +5,7 @@ The prediction step (*foldare_predict*) is based on a two-step strategy:
 
  &nbsp;&nbsp;step 1 - from an RNA fasta:   
  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(a)  predicts an ensemble,   
- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(b)  through stastical weighting creates a *pseudo-SHAPE* co-input  
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(b)  through statistical weighting creates a *pseudo-SHAPE* co-input  
  &nbsp;&nbsp;step 2 - from the same RNA fasta, uses the *pseudo-SHAPE* co-input to predict the final 2D structure 
     
 It builds on the combination of some available, well established, methods: &nbsp;V, &nbsp;R, &nbsp;L, &nbsp;E  &nbsp;(for ViennaRNA, RNAstructure, LinearFold, EternaFold, respectively). For clarity, we refer to ViennaRNA (V) when used as either a predictor (RNAfold module) or an ensembler (RNAsubopt module); for RNAstructure (R), we employed the Fold module in all cases.
@@ -16,7 +16,7 @@ In its default mode, *foldare_predict* runs EternaFold for step1 and RNAstructur
 Marino SM, Husak V, Tebaldi T (2026) "FoldARE, an RNA secondary structure analysis and prediction tool via generative pseudo-SHAPE modeling"
 *doi: 10.64898/2026.03.04.709501* &nbsp; (*preprint*)
 
-> **Web Server & Documentation:** *Fold*ARE is also available as an online platform at **[https://rdds.it](https://rdds.it)**, where you can run the full suite of prediction and ensemble analysis tools directly in your browser without local installation, as well as access additional documentation.
+> **Web Server & Documentation:** *Fold*ARE is also available as an online platform at **[https://rdds.it/foldare](https://rdds.it/foldare)**, where you can run the full suite of prediction and ensemble analysis tools directly in your browser without local installation, as well as access additional documentation.
 
 ## Installation
 Clone the repository:
@@ -72,8 +72,8 @@ example:
 The analysis section of FoldARE is based on detailed comparisons of different ensembles, created by (at least 2 of) the 4 methods (V, R, L, E).   
 FoldARE allows for three different analyses:  
 &nbsp;&nbsp;&nbsp;&nbsp;1. comparing all 4 methods, with &nbsp; compare_all.py     
-&nbsp;&nbsp;&nbsp;&nbsp;2. comparing pairwise any combinations of the 4 methods, with &nbsp;compar_pair.py  
-&nbsp;&nbsp;&nbsp;&nbsp;3. assessing the effect of (m6A) modifications on RNA ensembles, with &nbsp; compare_m6A.python
+&nbsp;&nbsp;&nbsp;&nbsp;2. comparing pairwise any combinations of the 4 methods, with &nbsp;compare_pair.py  
+&nbsp;&nbsp;&nbsp;&nbsp;3. assessing the effect of (m6A) modifications on RNA ensembles, with &nbsp; compare_m6A.py
 ### compare all
 ```bash
 python compare_all.py -s input_fasta
