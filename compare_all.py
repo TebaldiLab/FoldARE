@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """
 compare_all.py
 
-Generate M structures from each of the four ensemble tools (EternaFold, RNAsubopt,
+Generates M structures from each of the four ensemble tools (EternaFold, RNAsubopt,
 RNAstructure, LinearFold), then do an all-vs-all pairwise consensus scoring,
 aggregate each structure’s total score, rank them, and report:
 
  1. CSV of all structures sorted by aggregate consensus (highest first)
- 2. Top‐N structures CSV (if --top_n given)
+ 2. Top-N structures CSV (if --top_n given)
  3. Positional consensus score plot (HTML)
  4. Positional Shannon entropy plot (HTML)
  5. Positional unpairing probability plot (HTML)
@@ -41,7 +40,7 @@ diz_score={"A":utils.similarity_scoreA,"B":utils.similarity_scoreB,"C":utils.sim
 
 
 
-# ─── Letter‐to‐tool & colors ───────────────────────────────────────────────────
+#  Letter-to-tool & colors 
 LETTER_MAP = {
     "E": "EternaFold",
     "V": "RNASubopt",
@@ -56,7 +55,7 @@ ENSEMBLE_COLORS = {
     "L": "green",
 }
 
-# ─── Shannon entropy helper ────────────────────────────────────────────────────
+#  Shannon entropy  
 def shannon_math(data, unit="shannon"):
     base = {"shannon": 2.0, "natural": math.e, "hartley": 10.0}
     if len(data) <= 1:
@@ -69,7 +68,7 @@ def shannon_math(data, unit="shannon"):
             entropy -= p * math.log(p, base[unit])
     return entropy
 
-# ─── load config & sequence ────────────────────────────────────────────────────
+#  load config & sequence 
 def load_config(path):
     yaml = YAML(typ="safe")
     return yaml.load(Path(path).read_text())
@@ -95,7 +94,7 @@ def load_sequence(path_or_seq):
     else:
         return path_or_seq.strip()
 
-# ─── generate M‐member ensemble for a given letter ─────────────────────────────
+#  generate M-member ensemble for a given ensembler (in one letter code) 
 def generate_ensemble(letter, seq, out_db, M, cfg):
     tool = LETTER_MAP[letter]
     tool_cfg = cfg[tool]
@@ -137,20 +136,16 @@ def generate_ensemble(letter, seq, out_db, M, cfg):
         full = utils.extract_ensemble(tmp_db)
         if len(full) < M:
             print(f"WARNING: RNAstructure produced only {len(full)} (requested {M})")
-    elif letter == 'L':
-        # iterative‐delta until >= M
-        delta = params.get('delta', 5.0)
-        while True:
-            utils.LinearFold(
-                seq_file=seq, out_file=tmp_db,
-                mode="ensemble",
-                executable=exe,
-                delta=delta
-            )
-            full = utils.extract_ensemble(tmp_db)
-            if len(full) >= M:
-                break
-            delta += 1.0
+
+    elif letter == 'L':  # LinearFold -> fixed delta
+        utils.LinearFold(
+            seq_file=seq, out_file=tmp_db,
+            mode="ensemble",
+            executable=exe,
+            delta=params.get('delta', 5.0)
+        )
+
+ 
     else:
         raise ValueError(f"Unknown letter: {letter}")
 
@@ -174,7 +169,7 @@ def write_output_summary_compare_all(
     """
     p = out_dir / f"{base}_compare_all_summary.txt"
     lines = []
-    lines.append("compare_all.py – Output Summary\n")
+    lines.append("compare_all.py - Output Summary\n")
     lines.append("="*56 + "\n\n")
     lines.append(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     lines.append(f"Sequence:  {seq_label}\n")
@@ -193,13 +188,13 @@ def write_output_summary_compare_all(
     lines.append(f"  - {base}_compare_all_fraction_ssRNA.html      : per-position fraction of unpaired nucleotides ('.') across ALL structures (interactive)\n\n")
 
     lines.append("Notes:\n")
-    lines.append("  • HTML files are interactive; hover to see nt, value, and symbol frequencies.\n")
+    lines.append("  - HTML files are interactive; hover to see nt, value, and symbol frequencies.\n")
 
     with open(p, "w") as fh:
         fh.writelines(lines)
     print(f"Summary file written: {p}")
 
-# ─── main ─────────────────────────────────────────────────────────────────────
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("-s", "--sequence", required=True, help="FASTA path or raw sequence")
@@ -218,12 +213,9 @@ def main():
     apply_environment(cfg)
 
     seq = load_sequence(args.sequence)
-    
-    cfg2=load_config("config.yaml")
-    simscore=cfg2.get("Scoring", {})["score"]
-    
-    similarity_func=diz_score[simscore]
-    
+
+    simscore = cfg.get("Scoring", {})["score"]
+    similarity_func = diz_score[simscore]
    
     base = Path(args.sequence).stem
 
@@ -313,23 +305,23 @@ def main():
                     )
             print(f"Wrote top {top_n} to", top_csv)
 
-        # positional consensus & entropy across top_n
-        top_structs = [e['struct'] for e in ranked[:top_n]]
-        all_structs = [e['struct'] for e in ranked]
+        # positional consensus & entropy
+        all_structs_str = [e['struct'] for e in ranked]
         Lseq = len(seq)
-
-        # (top_n) consensus/entropy (unchanged – not used in plots below)
-        cons_scores = []
-        entp = []
-        freq = {".": [], "(": [], ")": []}
-        for i in range(Lseq):
-            col = [s[i] for s in top_structs]
-            counts = Counter(col)
-            most, cnt = counts.most_common(1)[0]
-            cons_scores.append(cnt / len(top_structs))
-            entp.append(shannon_math(col, unit="shannon"))
-            for sym in freq:
-                freq[sym].append(counts.get(sym, 0) / len(top_structs))
+     
+        if top_n:
+            top_structs = [e['struct'] for e in ranked[:top_n]]
+            cons_scores = []
+            entp = []
+            freq = {".": [], "(": [], ")": []}
+            for i in range(Lseq):
+                col = [s[i] for s in top_structs]
+                counts = Counter(col)
+                most, cnt = counts.most_common(1)[0]
+                cons_scores.append(cnt / len(top_structs))
+                entp.append(shannon_math(col, unit="shannon"))
+                for sym in freq:
+                    freq[sym].append(counts.get(sym, 0) / len(top_structs))
 
         # (all) consensus/entropy
         entp_all = []
@@ -337,13 +329,15 @@ def main():
         freq_all = {".": [], "(": [], ")": []}
 
         for i in range(Lseq):
-            col = [s[i] for s in all_structs]
+            col = [s[i] for s in all_structs_str]
             counts = Counter(col)
             most, cnt = counts.most_common(1)[0]
-            cons_scores_all.append(cnt / len(all_structs))
+            cons_scores_all.append(cnt / len(all_structs_str))
             entp_all.append(shannon_math(col, unit="shannon"))
             for sym in freq_all:
-                freq_all[sym].append(counts.get(sym, 0) / len(all_structs))
+                freq_all[sym].append(counts.get(sym, 0) / len(all_structs_str))
+
+     
 
         # Plotly chart for consensus score
         nrows = 4
@@ -459,7 +453,7 @@ def main():
         fig_ent.write_html(ent_html, auto_open=False)
         print("Wrote positional entropy plot to", ent_html)
 
-        # ─── Per-position fraction of unpaired '.' (adaptive rows) ─────────────
+        #  Per-position fraction of unpaired '.' (adaptive rows)
         pos_ss_all = freq_all["."]  # length = Lseq
 
         fig_ss = make_subplots(
