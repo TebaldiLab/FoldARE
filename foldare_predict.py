@@ -11,7 +11,7 @@ Workflow:
  1. Ensemble generation (-e/--ensemble, one of E, V, R, L):
     - E (EternaFold): sample N structures
     - V (ViennaRNA/RNASubopt): enumerate N suboptimal structures
-    - R (RNAstructure): output the MFE structure (warns if N>1)
+    - R (RNAstructure): output the MFE structure 
     - L (LinearFold): start with Delta=5.0, iteratively increment Delta by 1.0 until >=N structures
     - V6 (ViennaRNA with m6A): as V, but with m6A support
     - R6 (RNAstructure with m6A): as R, but with m6
@@ -19,7 +19,7 @@ Workflow:
     * The raw ensemble is cleaned and trimmed to exactly N dot-bracket entries
 
  2. SHAPE reactivity generation
-    - Uses create_shape_file() from utils_v2 with thresholds & coefficients from config.yaml
+    - Uses create_shape_file() from utils with thresholds & coefficients from config.yaml
 
  3. Final prediction (-p/--predictor, one of E, V, R, L):
     - E (EternaFold): converts SHAPE->BPSEQ then predicts
@@ -31,9 +31,9 @@ Workflow:
     * Uses SHAPE file from previous step, or --shape if provided
 
 Outputs (in <output_folder>):
-  * <basename>_<ensemble>_ens.db          — N dot-bracket structures
-  * <basename>_shape.txt                  — per-nucleotide SHAPE reactivities
-  * <basename>_<ensemble>_<predictor>_final.db — final predicted structure
+  * <basename>_<ensemble>_ens.db          -- N dot-bracket structures
+  * <basename>_shape.txt                  -- per-nucleotide SHAPE reactivities
+  * <basename>_<ensemble>_<predictor>_final.db -- final predicted structure
 """
 import argparse
 import os
@@ -90,7 +90,7 @@ def parse_cli_args():
     parser.add_argument("-s", "--sequence", required=True, help="Input FASTA file")
     parser.add_argument("-o", "--output_folder", default="foldare_results", help="Output folder")
     parser.add_argument("-c", "--config", default="config.yaml", help="YAML configuration file")
-    parser.add_argument("--shape", help="Existing SHAPE file – skip ensemble step")
+    parser.add_argument("--shape", help="Existing SHAPE file -- skip ensemble step")
     parser.add_argument("--shape_ens", help="Existing SHAPE file for ensemble generation")
     parser.add_argument("--ens_n", type=int, help="Target ensemble size for all tools")
 
@@ -110,18 +110,18 @@ def ensure_dir(path: str):
 
 
 def select(cfg_dict, cli_val, key):
-    """Pick value: config first, overridden by CLI if non-None."""
+    """Picks value: config first, overridden by CLI if non-None."""
     return cli_val if cli_val is not None else cfg_dict.get(key)
 
 
 def filter_kwargs(func, mapping):
-    """Drop keys not accepted by func and None-valued entries."""
+    """Returns only the kwargs accepted by func that are not None."""
     sig = signature(func).parameters
     return {k: v for k, v in mapping.items() if k in sig and v is not None}
 
 
 def clean_in_place(db_path: str):
-    """Run clean_ensemble_file safely without input=output overwrite."""
+    """Run clean_ensemble_file safely, without input=output overwrite."""
     tmp_path = db_path + ".clean"
     clean_ensemble_file(db_path, tmp_path)
     os.replace(tmp_path, db_path)
@@ -129,10 +129,7 @@ def clean_in_place(db_path: str):
 
 def normalize_tool_choice(raw_value: str, role: str):
     """
-    Map short flags (E/V/R/L/V6/R6) to full tool names and detect m6A usage.
-
-    To preserve behavior we only normalize when the provided value is a short flag
-    (len <= 2), matching the original implementation.
+    Maps short flags (E/V/R/L/V6/R6) to full tool names, and detects m6A usage.
     """
     m6a = False
     resolved = raw_value
@@ -178,7 +175,7 @@ def write_ensemblefold_summary(
     shape_source: str = "generated from ensemble",
 ):
     """
-    Create <base_name>_foldare_summary.txt describing inputs, params, and outputs.
+    Creates <base_name>_foldare_summary.txt describing inputs, params, and outputs.
     Only lists files that actually exist in out_dir.
     """
     out_path = os.path.join(out_dir, f"{base_name}_foldare_summary.txt")
@@ -207,7 +204,7 @@ def write_ensemblefold_summary(
             generated.append((fname, "Final predicted structure (dot-bracket)"))
 
     lines = []
-    lines.append("FoldARE – Output Summary\n")
+    lines.append("FoldARE - Output Summary\n")
     lines.append("=" * 60 + "\n\n")
     lines.append(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
     lines.append(f"Sequence file:  {os.path.abspath(sequence_path)}\n")
@@ -238,9 +235,6 @@ def write_ensemblefold_summary(
     print(f"Summary file written: {out_path}")
 
 
-# -----------------------------------------------------------------------------
-# Core steps ------------------------------------------------------------------
-# -----------------------------------------------------------------------------
 def build_ensemble(
     etool: str,
     base_name: str,
@@ -508,9 +502,7 @@ def predict_structure(
     return pred_out
 
 
-# -----------------------------------------------------------------------------
-# Entry point -----------------------------------------------------------------
-# -----------------------------------------------------------------------------
+
 def main():
     args = parse_cli_args()
     Path(args.output_folder).mkdir(parents=True, exist_ok=True)
@@ -587,7 +579,7 @@ def main():
         pred_params_cfg,
     )
     
-    print("Pipeline completed – outputs in", os.path.abspath(args.output_folder))
+    print("Pipeline completed -- outputs in", os.path.abspath(args.output_folder))
     print("Result file:", os.path.abspath(pred_out))
 
     #shape_source = (
@@ -617,7 +609,7 @@ def main():
         delta=delta,
         shape_source=shape_source,
     )
-    ############ USE SPACE BELOW to edit all db output file in a similar manner? (>head\nseq\npred\t(MFE or MEA) --# I would remove energy..
+   
     if predictor_tool.lower()=="linearfold":
         LF_compatible=open(pred_out).read().replace("Unrecognized sequence: ","")
         Lf2=open(pred_out,"w");Lf2.write(LF_compatible);Lf2.close()
