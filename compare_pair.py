@@ -3,8 +3,8 @@
 """
 compare_pair.py
 
-Generate N structures from two chosen ensemble tools (EternaFold, RNAsubopt,
-RNAstructure, or LinearFold), then compute and visualize how they agree:
+Generates N structures from two chosen ensemble tools (EternaFold, RNAsubopt,
+RNAstructure, or LinearFold), then computes and visualize how they agree:
 
  1. Produces an interactive NxN Plotly heatmap (HTML) of all-vs-all pairwise
     consensus scores between the two ensembles.
