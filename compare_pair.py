@@ -6,14 +6,14 @@ compare_pair.py
 Generate N structures from two chosen ensemble tools (EternaFold, RNAsubopt,
 RNAstructure, or LinearFold), then compute and visualize how they agree:
 
- 1. Produce an interactive N×N Plotly heatmap (HTML) of all‐vs‐all pairwise
+ 1. Produces an interactive NxN Plotly heatmap (HTML) of all-vs-all pairwise
     consensus scores between the two ensembles.
- 2. Compute and plot positional Shannon entropy (HTML), showing variability
+ 2. Computes and plots positional Shannon entropy (HTML), showing variability
     at each nucleotide position across the two sets.
- 3. Compute and plot positional consensus score (HTML), the fraction of
+ 3. Computes and plots positional consensus score (HTML), the fraction of
     structures agreeing at each position.
- 4. Compute and plot the fraction of unpaired ('.') nucleotides at each position.
- 5. Optionally, extract the top-N best pairs of structures by average consensus and
+ 4. Computes and plots the fraction of unpaired ('.') nucleotides at each position.
+ 5. Optionally, extracts the top-N best pairs of structures by average consensus and
     write them to a CSV.
 
 Usage example:
@@ -134,7 +134,7 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
             nsamples=ens_n 
         )
 
-    elif letter == 'R' or letter == 'R6':  # RNAstructure → warning if < N
+    elif letter == 'R' or letter == 'R6':  # RNAstructure -> warning if < N
         utils.RNAStructure(
             seq_file=seq,
             out_file=tmp_db,
@@ -150,26 +150,14 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
             fh.write("\n".join(trimmed) + "\n")
         return trimmed
 
-    elif letter == 'L':  # LinearFold → iterative‐delta
-        desired       = ens_n
-        current_delta = params.get('delta', 5.0)
-        while True:
-            utils.LinearFold(
-                seq_file=seq,
-                out_file=tmp_db,
-                mode="ensemble",
-                executable=exe,
-                delta=current_delta
-            )
-            full_list = utils.extract_ensemble(tmp_db)
-            if len(full_list) >= desired:
-                break
-            current_delta += 1.0
-
-        trimmed = full_list[:desired]
-        with open(out_db, 'w') as fh:
-            fh.write("\n".join(trimmed) + "\n")
-        return trimmed
+    elif letter == 'L':  # LinearFold 
+        utils.LinearFold(
+            seq_file=seq,
+            out_file=tmp_db,
+            mode="ensemble",
+            executable=exe,
+            delta=params.get('delta', 5.0)
+        )
 
     else:
         raise ValueError(f"Unknown ensemble letter: {letter}")
@@ -181,8 +169,6 @@ def generate_ensemble(letter: str, seq: str, out_db: str, ens_n: int, cfg: dict)
         fh.write("\n".join(trimmed) + "\n")
     return trimmed
 
-from datetime import datetime
-from pathlib import Path
 
 def write_output_summary_compare_pair(
     out_dir: Path,
@@ -199,7 +185,7 @@ def write_output_summary_compare_pair(
     """
     p = out_dir / f"{base}_compare_{e1}_{e2}_pair_summary.txt"
     lines = []
-    lines.append("compare_pair.py – Output Summary\n")
+    lines.append("compare_pair.py - Output Summary\n")
     lines.append("="*56 + "\n\n")
     lines.append(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
     lines.append(f"Sequence: {seq_label}\n")
@@ -212,7 +198,7 @@ def write_output_summary_compare_pair(
     lines.append(f"Output folder: {out_dir.resolve()}\n\n")
 
     lines.append("[Generated files]\n")
-    lines.append(f"  - {base}_compare_{e1}_{e2}_heatmap.html               : N×N similarity heatmap (interactive)\n")
+    lines.append(f"  - {base}_compare_{e1}_{e2}_heatmap.html               : NxN similarity heatmap (interactive)\n")
     lines.append(f"  - {base}_compare_{e1}_{e2}_positional_entropy.html   : per-position Shannon entropy, both methods overlaid (interactive)\n")
     lines.append(f"  - {base}_compare_{e1}_{e2}_structural_consensus.html : per-position consensus, both methods overlaid (interactive)\n")
     lines.append(f"  - {base}_compare_{e1}_{e2}_fraction_ssRNA.html      : per-position fraction of unpaired nucleotides ('.'), both methods overlaid (interactive)\n")
@@ -220,8 +206,8 @@ def write_output_summary_compare_pair(
     if top_n:
         lines.append(f"  - {base}_compare_{e1}_{e2}_best_pairs.csv            : top-N structure pairs by similarity\n")
     lines.append("\nNotes:\n")
-    lines.append("  • Heatmap hover shows pairwise similarity and truncated structures.\n")
-    lines.append("  • Entropy/consensus plots are chunked over rows for long sequences; hover for nt and per-symbol fractions.\n")
+    lines.append("  - Heatmap hover shows pairwise similarity and truncated structures.\n")
+    lines.append("  - Entropy/consensus plots are chunked over rows for long sequences; hover for nt and per-symbol fractions.\n")
 
     with open(p, "w") as fh:
         fh.writelines(lines)
@@ -251,17 +237,15 @@ def main():
     # ensure output folder exists (minimal change)
     Path(args.output_folder).mkdir(parents=True, exist_ok=True)
 
-    # ─── load config & env ─────────────────────────────────────────────────────
+    # loads config & env 
     CFG = load_config(args.config)
     apply_environment(CFG)
 
-    # ─── determine scoring method ───────────────────────────────────────────────
-    cfg2=load_config("config.yaml")
-    simscore=cfg2.get("Scoring", {})["score"]
     
-    similarity_func=diz_score[simscore]
+    simscore = CFG.get("Scoring", {})["score"]
+    similarity_func = diz_score[simscore]
 
-    # ─── determine ensemble‐size (ens_n) and best‐structures count (top_n) ─────────
+    
     ens_n = args.ens_n if args.ens_n is not None else CFG.get("global_ensemble_size", 20)
     top_n = args.top_n  # may be None
 
@@ -335,7 +319,7 @@ def main():
         fig.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_heatmap.html"), auto_open=False)
         print("Wrote heatmap to", os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_heatmap.html"))
 
-        # ─── Positional entropy & consensus ───────────────────────────────────────────
+        
         # Compute global entropy for each ensemble
         size1 = len(structs1[0])
         entropy_list1 = [
@@ -395,7 +379,7 @@ def main():
         min_px_per_base = 10 
         row_width_px = max(chunk_size * min_px_per_base, 800)
 
-        # ─── Positional entropy plot (adaptive rows, scrollable width) ───────────────
+        #  Positional entropy plot (adaptive rows, scrollable width)
         fig_e = make_subplots(
             rows=nrows, cols=1,
             shared_xaxes=False,
@@ -468,7 +452,7 @@ def main():
         fig_e.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_positional_entropy.html"), auto_open=False)
         print("Wrote positional entropy plot to", os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_positional_entropy.html"))
 
-        # ─── Positional consensus plot (adaptive rows, scrollable width) ─────────────
+        # Positional consensus plot 
         fig_c = make_subplots(
             rows=nrows, cols=1,
             shared_xaxes=False,
@@ -538,7 +522,7 @@ def main():
         fig_c.write_html(os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_structural_consensus.html"), auto_open=False)
         print("Wrote structural consensus plot to", os.path.join(args.output_folder, f"{base}_compare_pair_{e1}_{e2}_structural_consensus.html"))
 
-        # ─── Per-position fraction of unpaired '.' (adaptive rows) ─────────────
+        # Per-position fraction of unpaired '.' (adaptive rows) 
         pos_ss1 = freq1["."]  # length = seq_len
         pos_ss2 = freq2["."]
 
