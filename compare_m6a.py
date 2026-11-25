@@ -5,12 +5,12 @@ compare_m6a.py
 
 Run ViennaRNA (RNAsubopt) and/or RNAstructure in m6A mode on:
   - a non-modified (no_mod) sequence
-  - an m6A-modified sequence (A→'6' at specified positions)
+  - an m6A-modified sequence (A->'6' at specified positions)
 
 and compare how m6A affects folding:
 
 Outputs:
-  1) Resulting ensembles (dot–bracket lists) for no_mod and m6A, per tool.
+  1) Resulting ensembles (dot-bracket lists) for no_mod and m6A, per tool.
   2) Positional Shannon entropy plots (no_mod vs m6A) per tool (HTML).
   3) Positional consensus plots (no_mod vs m6A) per tool (HTML).
   4) If --tool both: extra plots comparing per-position entropy / consensus
@@ -122,7 +122,7 @@ def generate_ensemble(letter: str, seq_file: str, out_db: str, ens_n: int, cfg: 
     """
     Generate an ensemble using selected tool.
     Removes any intermediate .tmp file after extraction.
-    Returns list[str] of dot–bracket strings (trimmed to ens_n).
+    Returns list[str] of dot-bracket strings (trimmed to ens_n).
     """
     tool = LETTER_MAP[letter]
     tool_cfg = cfg[tool]
@@ -173,7 +173,7 @@ def write_output_summary(out_dir: Path, base: str, want_V: bool, want_R: bool, M
     """
     summary_path = out_dir / f"{base}_compare_m6a_summary.txt"
     lines = []
-    lines.append("compare_m6a.py – Output Summary\n")
+    lines.append("compare_m6a.py - Output Summary\n")
     lines.append("=" * 56 + "\n\n")
     lines.append(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     lines.append(f"Output folder: {out_dir.resolve()}\n\n")
@@ -215,7 +215,7 @@ def write_output_summary(out_dir: Path, base: str, want_V: bool, want_R: bool, M
 
 def positional_stats_with_freq(structs: list):
     """
-    For a list of dot–bracket strings, compute per-position:
+    For a list of dot-bracket strings, compute per-position:
       - Shannon entropy (utils.shannon_math, base 2)
       - Consensus (fraction of most frequent symbol)
       - Per-symbol frequency dict: {'.': [..], '(': [..], ')': [..]}
@@ -404,7 +404,7 @@ def main():
                 labels=["Vienna no_mod", "Vienna m6A"],
                 colors=[ENSEMBLE_COLORS['V'], ENSEMBLE_COLORS['V6']],
                 freq_list=[freq_no_mod, freq_m6],
-                title="Positional Shannon Entropy – ViennaRNA (no_mod vs m6A)",
+                title="Positional Shannon Entropy - ViennaRNA (no_mod vs m6A)",
                 y_title="Entropy (shannon)",
                 out_html=str(out_dir / f"{base}_Vienna_no_mod_vs_m6A_entropy.html"),
                 mods=mods
@@ -415,7 +415,7 @@ def main():
                 labels=["Vienna no_mod", "Vienna m6A"],
                 colors=[ENSEMBLE_COLORS['V'], ENSEMBLE_COLORS['V6']],
                 freq_list=[freq_no_mod, freq_m6],
-                title="Positional Consensus – ViennaRNA (no_mod vs m6A)",
+                title="Positional Consensus - ViennaRNA (no_mod vs m6A)",
                 y_title="Consensus",
                 out_html=str(out_dir / f"{base}_Vienna_no_mod_vs_m6A_consensus.html"),
                 mods=mods
@@ -447,7 +447,7 @@ def main():
                 labels=["RNAstr no_mod", "RNAstr m6A"],
                 colors=[ENSEMBLE_COLORS['R'], ENSEMBLE_COLORS['R6']],
                 freq_list=[freq_no_mod, freq_m6],
-                title="Positional Shannon Entropy – RNAstructure (no_mod vs m6A)",
+                title="Positional Shannon Entropy - RNAstructure (no_mod vs m6A)",
                 y_title="Entropy (shannon)",
                 out_html=str(out_dir / f"{base}_RNAStructure_no_mod_vs_m6A_entropy.html"),
                 mods=mods
@@ -458,7 +458,7 @@ def main():
                 labels=["RNAstr no_mod", "RNAstr m6A"],
                 colors=[ENSEMBLE_COLORS['R'], ENSEMBLE_COLORS['R6']],
                 freq_list=[freq_no_mod, freq_m6],
-                title="Positional Consensus – RNAstructure (no_mod vs m6A)",
+                title="Positional Consensus - RNAstructure (no_mod vs m6A)",
                 y_title="Consensus",
                 out_html=str(out_dir / f"{base}_RNAStructure_no_mod_vs_m6A_consensus.html"),
                 mods=mods
@@ -490,7 +490,7 @@ def main():
                 labels=["Vienna m6A", "RNAstr m6A"],
                 colors=[ENSEMBLE_COLORS['V6'], ENSEMBLE_COLORS['R6']],
                 freq_list=[freq_V_m6, freq_R_m6],
-                title="Positional Shannon Entropy – m6A (Vienna vs RNAstructure)",
+                title="Positional Shannon Entropy - m6A (Vienna vs RNAstructure)",
                 y_title="Entropy (shannon)",
                 out_html=str(out_dir / f"{base}_m6A_crossTool_entropy.html"),
                 mods=mods
@@ -501,7 +501,7 @@ def main():
                 labels=["Vienna m6A", "RNAstr m6A"],
                 colors=[ENSEMBLE_COLORS['V6'], ENSEMBLE_COLORS['R6']],
                 freq_list=[freq_V_m6, freq_R_m6],
-                title="Positional Consensus – m6A (Vienna vs RNAstructure)",
+                title="Positional Consensus - m6A (Vienna vs RNAstructure)",
                 y_title="Consensus",
                 out_html=str(out_dir / f"{base}_m6A_crossTool_consensus.html"),
                 mods=mods
